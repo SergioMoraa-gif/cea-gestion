@@ -1,0 +1,244 @@
+/* ================================
+   auth.css — Estilos del Login
+   CEA Sistema de Gestión
+   ================================ */
+
+/* --- Fondo --- */
+.bg-image {
+  position: fixed;
+  inset: 0;
+  background: url('../img/Fondo-gestión-azul.jpg') center center / cover no-repeat;
+  z-index: 0;
+}
+
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 18, 70, 0.18);
+  z-index: 1;
+}
+
+/* --- Layout centrado --- */
+.login-wrapper {
+  position: relative;
+  z-index: 2;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* --- Tarjeta glass --- */
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1.5px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2.8rem 2.4rem 2.4rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+
+  /* Animación de entrada */
+  animation: cardEntrada 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cardEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* --- Header --- */
+.card-header {
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+
+.brand-title {
+  font-size: 3.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-white);
+  line-height: 1;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+
+.brand-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--text-light);
+  margin-top: 0.35rem;
+}
+
+/* --- Mensaje de error --- */
+.error-msg {
+  background: rgba(220, 38, 38, 0.2);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  color: #fca5a5;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  font-size: 0.82rem;
+  text-align: center;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Grupos de input --- */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--input-bg);
+  border-radius: var(--input-radius);
+  border: 2px solid transparent;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  overflow: hidden;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 0 1rem;
+  color: var(--input-label);
+  flex-shrink: 0;
+}
+
+.input-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.input-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--input-label);
+  padding: 0 0.4rem 0 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.input-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0.85rem 1rem 0.85rem 0;
+  font-size: 0.9rem;
+  color: #1e3a8a;
+  font-weight: 400;
+  min-width: 0;
+}
+
+.input-field::placeholder {
+  color: rgba(30, 58, 138, 0.4);
+  font-weight: 300;
+}
+
+/* --- Botón mostrar contraseña --- */
+.toggle-password {
+  background: transparent;
+  border: none;
+  padding: 0 1rem;
+  color: rgba(30, 58, 138, 0.5);
+  display: flex;
+  align-items: center;
+  transition: color var(--transition);
+  flex-shrink: 0;
+}
+
+.toggle-password:hover {
+  color: var(--azul-claro);
+}
+
+.toggle-password svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* --- Botón ingresar --- */
+.btn-login {
+  width: 100%;
+  padding: 0.9rem;
+  background: var(--azul-btn);
+  color: var(--text-white);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: var(--input-radius);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  box-shadow: var(--shadow-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.btn-login:hover:not(:disabled) {
+  background: var(--azul-btn-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(30, 58, 138, 0.6);
+}
+
+.btn-login:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* --- Spinner de carga --- */
+.spinner {
+  width: 18px;
+  height: 18px;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 2rem 1.5rem;
+    border-radius: 20px;
+  }
+
+  .brand-title {
+    font-size: 3rem;
+  }
+}

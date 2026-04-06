@@ -1,0 +1,75 @@
+/* ================================
+main.css — Variables y reset global
+CEA Sistema de Gestión
+   ================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Colores principales */
+    --azul-oscuro:    #0f1f6e;
+    --azul-medio:     #1a3a9e;
+    --azul-claro:     #2563eb;
+    --azul-hover:     #1d4ed8;
+    --azul-btn:       #1e3a8a;
+    --azul-btn-hover: #1e40af;
+
+  /* Glassmorphism */
+    --glass-bg:       rgba(30, 60, 160, 0.35);
+    --glass-border:   rgba(255, 255, 255, 0.25);
+    --glass-blur:     18px;
+
+  /* Texto */
+    --text-white:     #ffffff;
+    --text-light:     rgba(255, 255, 255, 0.85);
+    --text-muted:     rgba(255, 255, 255, 0.55);
+
+  /* Inputs */
+    --input-bg:       rgba(255, 255, 255, 0.95);
+    --input-border:   rgba(255, 255, 255, 0.6);
+    --input-focus:    #2563eb;
+    --input-text:     #1e3a8a;
+    --input-label:    #1e3a8a;
+    --input-radius:   999px;
+
+  /* Sombras */
+    --shadow-card:    0 8px 40px rgba(10, 20, 80, 0.45);
+    --shadow-btn:     0 4px 20px rgba(30, 58, 138, 0.5);
+
+  /* Tipografía */
+    --font-main: 'Outfit', sans-serif;
+
+  /* Transiciones */
+    --transition: 0.22s ease;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    font-family: var(--font-main);
+    color: var(--text-white);
+    overflow: hidden;
+}
+
+button {
+    font-family: var(--font-main);
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+
+input {
+    font-family: var(--font-main);
+    outline: none;
+    border: none;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}

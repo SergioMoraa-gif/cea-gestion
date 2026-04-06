@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CEA — Pagos</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/pagos.css" />
+</head>
+<body>
+
+  <div class="bg-image"></div>
+  <div class="bg-overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-brand">CEA</span>
+      <button class="sidebar-close" id="sidebarClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="clases.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span>Clases</span>
+      </a>
+      <a href="maestros.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Maestros y calendario</span>
+      </a>
+      <a href="pagos.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <span>Pagos</span>
+      </a>
+      <a href="estudiantes.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Estudiantes</span>
+      </a>
+      <a href="reportes.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>Reportes</span>
+      </a>
+    </nav>
+    <button class="btn-logout" id="btnLogout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Cerrar sesión</span>
+    </button>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <main class="main-content">
+
+    <header class="topbar">
+      <button class="btn-menu" id="btnMenu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-info">
+        <h1 class="topbar-title">Pagos</h1>
+        <span class="topbar-sub">Gestión de cobros</span>
+      </div>
+      <button class="btn-cargo-manual" id="btnCargoManual">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Generar cargos del mes
+      </button>
+    </header>
+
+    <!-- FILTROS -->
+    <section class="filtros-bar">
+      <input type="text" id="filtroBuscar" class="filtro-buscar" placeholder="Buscar alumno..."/>
+      <select id="filtroEstado" class="filtro-select">
+        <option value="">Todos los estados</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="pagado">Pagado</option>
+        <option value="en_transito">En tránsito</option>
+      </select>
+      <select id="filtroMaestro" class="filtro-select">
+        <option value="">Todos los maestros</option>
+      </select>
+    </section>
+
+    <!-- TABLA -->
+    <section class="tabla-section">
+      <div id="loadingMsg" class="loading-msg">Cargando pagos...</div>
+      <div id="emptyMsg" class="empty-msg" style="display:none">No hay pagos registrados.</div>
+      <div class="tabla-wrapper" id="tablaWrapper" style="display:none">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Alumno</th>
+              <th>Clase</th>
+              <th>Maestro</th>
+              <th>Mes</th>
+              <th>Monto</th>
+              <th>Método</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL REGISTRAR / EDITAR PAGO -->
+  <div class="modal-overlay" id="modalPago" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modalPagoTitulo">Registrar pago</h3>
+          <p class="modal-sub" id="modalPagoSub">—</p>
+        </div>
+        <button class="btn-cerrar-modal" id="modalPagoCerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <div class="estado-btns">
+          <button class="btn-estado" data-val="pagado"><span class="dot verde"></span>Pagado</button>
+          <button class="btn-estado" data-val="en_transito"><span class="dot azul"></span>En tránsito</button>
+          <button class="btn-estado" data-val="pendiente"><span class="dot amarillo"></span>Pendiente</button>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Monto ($)</label>
+          <input type="number" id="pagoMonto" class="form-input" min="0" step="0.01"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Método de pago</label>
+          <select id="pagoMetodo" class="form-input form-select">
+            <option value="">— Selecciona —</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha de pago</label>
+        <input type="date" id="pagoFecha" class="form-input"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notas (opcional)</label>
+        <input type="text" id="pagoNotas" class="form-input" placeholder="Ej. Pago parcial..."/>
+      </div>
+
+      <div id="pagoError" class="form-error" style="display:none"></div>
+
+      <div class="modal-actions">
+        <button class="btn-cancelar" id="modalPagoCancelar">Cancelar</button>
+        <button class="btn-guardar" id="modalPagoGuardar">
+          <span class="btn-text">Guardar pago</span>
+          <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GENERAR CARGOS -->
+  <div class="modal-overlay" id="modalCargo" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Generar cargos mensuales</h3>
+        <button class="btn-cerrar-modal" id="modalCargoCerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="modal-desc">Genera cargos en <strong>Pendiente</strong> para todos los alumnos activos en el mes seleccionado. No duplica si ya existe un cargo para ese mes.</p>
+      <div class="form-group">
+        <label class="form-label">Mes a generar</label>
+        <input type="month" id="cargoMes" class="form-input"/>
+      </div>
+      <div id="cargoError" class="form-error" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="btn-cancelar" id="modalCargoCancelar">Cancelar</button>
+        <button class="btn-guardar" id="modalCargoConfirmar">
+          <span class="btn-text">Generar cargos</span>
+          <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/pagos.js"></script>
+</body>
+</html>
