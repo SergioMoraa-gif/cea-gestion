@@ -120,3 +120,31 @@
   .tabla th:nth-child(4), .tabla td:nth-child(4),
   .tabla th:nth-child(5), .tabla td:nth-child(5) { display: none; }
 }
+
+/* Botones de maestros en inscripción */
+.maestros-label { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.65); margin-bottom: 0.6rem; }
+.maestros-btns { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.btn-maestro { padding: 0.65rem 1.2rem; background: rgba(37,99,235,0.25); border: 1.5px solid rgba(37,99,235,0.5); border-radius: 999px; color: #93c5fd; font-size: 0.88rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); transition: all 0.2s; }
+.btn-maestro:hover { background: rgba(37,99,235,0.45); color: #fff; transform: translateY(-1px); }
+.maestros-hint { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 0.5rem; }
+
+/* Acciones tabla */
+.acciones { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.btn-accion { padding: 0.28rem 0.6rem; border-radius: 8px; border: none; font-size: 0.72rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); white-space: nowrap; }
+.btn-accion-perfil    { background: rgba(139,92,246,0.25); color: #c4b5fd; }
+.btn-accion-perfil:hover { background: rgba(139,92,246,0.45); }
+.btn-accion-horario   { background: rgba(37,99,235,0.25);  color: #93c5fd; }
+.btn-accion-horario:hover { background: rgba(37,99,235,0.45); }
+.btn-accion-editar    { background: rgba(255,255,255,0.12); color: #fff; }
+.btn-accion-editar:hover { background: rgba(255,255,255,0.22); }
+.btn-accion-baja      { background: rgba(245,158,11,0.2);  color: #fcd34d; }
+.btn-accion-baja:hover { background: rgba(245,158,11,0.35); }
+.btn-accion-reactivar { background: rgba(16,185,129,0.2);  color: #6ee7b7; }
+.btn-accion-reactivar:hover { background: rgba(16,185,129,0.35); }
+.btn-accion-eliminar  { background: rgba(220,38,38,0.2);   color: #fca5a5; }
+.btn-accion-eliminar:hover { background: rgba(220,38,38,0.35); }
+
+/* Badges */
+.badge-estado { display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+.badge-activo   { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+.badge-inactivo { background: rgba(100,100,100,0.2); color: rgba(255,255,255,0.4); }

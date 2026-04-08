@@ -7,8 +7,11 @@ const emailInput    = document.getElementById('emailInput')
 const passwordInput = document.getElementById('passwordInput')
 const btnLogin      = document.getElementById('btnLogin')
 const errorMsg      = document.getElementById('errorMsg')
+const hintMsg       = document.getElementById('hintMsg')
 const togglePassword= document.getElementById('togglePassword')
 const eyeIcon       = document.getElementById('eyeIcon')
+
+let intentosFallidos = 0
 
 // --- Mostrar / ocultar contraseña ---
 togglePassword.addEventListener('click', () => {
@@ -66,7 +69,10 @@ async function iniciarSesion() {
     const data = await res.json()
 
     if (!res.ok) {
-      mostrarError(data.message || 'Credenciales incorrectas. Intenta de nuevo.')
+      intentosFallidos++
+      mostrarError('Contraseña incorrecta. Intenta de nuevo.')
+      if (intentosFallidos >= 2) hintMsg.style.display = 'flex'
+      if (intentosFallidos >= 3) bloquearTemporalmente(5)
       return
     }
 
@@ -94,6 +100,24 @@ function mostrarError(mensaje) {
 function ocultarError() {
   errorMsg.style.display = 'none'
   errorMsg.textContent = ''
+}
+
+function bloquearTemporalmente(segundos) {
+  let restantes = segundos
+  btnLogin.disabled = true
+  const textoOriginal = document.querySelector('.btn-text')
+  textoOriginal.textContent = `Espera ${restantes}s...`
+
+  const intervalo = setInterval(() => {
+    restantes--
+    if (restantes <= 0) {
+      clearInterval(intervalo)
+      btnLogin.disabled = false
+      textoOriginal.textContent = 'Ingresar'
+    } else {
+      textoOriginal.textContent = `Espera ${restantes}s...`
+    }
+  }, 1000)
 }
 
 function setLoading(estado) {

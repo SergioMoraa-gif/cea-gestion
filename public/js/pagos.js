@@ -1,8 +1,5 @@
 // ================================
 // pagos.js — CEA Sistema de Gestión
-// Refactorizado: esquema nuevo
-// Los datos de estudiantes ya traen id_maestro y clase_id aplanados
-// Los pagos usan id_pago, id_estudiante, id_clase
 // ================================
 
 const token = sessionStorage.getItem('cea_token')
@@ -13,10 +10,10 @@ const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer $
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 let estudiantesData    = []
-let clasesData         = []
 let maestrosData       = []
 let pagosData          = []
 let pagoEditandoId     = null
+let pagoEliminandoId   = null
 let estadoSeleccionado = 'pagado'
 
 // --- Sidebar ---
@@ -31,22 +28,21 @@ document.getElementById('btnLogout').addEventListener('click', () => { sessionSt
 // --- Cargar datos base ---
 async function cargarDatos() {
   try {
-    const [resEst, resClases, resMaestros] = await Promise.all([
+    const [resEst, resMaestros] = await Promise.all([
       fetch('/api/estudiantes', { headers }),
-      fetch('/api/clases',      { headers }),
       fetch('/api/maestros',    { headers })
     ])
-    estudiantesData = (await resEst.json()).estudiantes   || []
-    clasesData      = (await resClases.json()).clases     || []
-    maestrosData    = (await resMaestros.json()).maestros || []
+    estudiantesData = (await resEst.json()).estudiantes    || []
+    maestrosData    = (await resMaestros.json()).maestros  || []
 
     const sel = document.getElementById('filtroMaestro')
     maestrosData.filter(m => m.activo !== false).forEach(m => {
       const opt = document.createElement('option')
-      opt.value = m.id_maestro; opt.textContent = m.nombre   // ← id_maestro
+      opt.value = m.id_maestro
+      opt.textContent = m.nombre
       sel.appendChild(opt)
     })
-  } catch (err) { console.error('Error cargando datos:', err) }
+  } catch (err) { console.error('Error cargando datos base:', err) }
 }
 
 // --- Cargar pagos ---
@@ -62,24 +58,17 @@ async function cargarPagos() {
   tablaWrapper.style.display = 'none'
 
   const estado   = document.getElementById('filtroEstado').value
-  const maestroF = document.getElementById('filtroMaestro').value
   const busqueda = document.getElementById('filtroBuscar').value.toLowerCase()
 
   try {
     const params = new URLSearchParams()
     if (estado) params.set('estado', estado)
 
-    const res  = await fetch(`/api/pagos?${params}`, { headers })
-    const data = await res.json()
-    pagosData  = data.pagos || []
+    const res = await fetch(`/api/pagos?${params}`, { headers })
+    pagosData = (await res.json()).pagos || []
 
-    // Filtros locales
-    // estudiantesData ya trae id_maestro aplanado desde el controller
+    // Filtro local por nombre
     let lista = pagosData
-    if (maestroF) lista = lista.filter(p => {
-      const est = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
-      return est && String(est.id_maestro) === maestroF
-    })
     if (busqueda) lista = lista.filter(p => {
       const est = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
       return est && est.nombre.toLowerCase().includes(busqueda)
@@ -90,18 +79,17 @@ async function cargarPagos() {
     tablaWrapper.style.display = 'block'
 
     lista.forEach(p => {
-      const est     = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
-      const clase   = clasesData.find(c => c.id_clase === p.id_clase)
-      const maestro = maestrosData.find(m => m.id_maestro === (est ? est.id_maestro : null))
-      const fechaMes  = p.mes ? new Date(p.mes + 'T12:00:00') : null
-      const mesLabel  = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
+      const est      = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
+      const fechaMes = p.mes ? new Date(p.mes + 'T12:00:00') : null
+      const mesLabel = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
       const metodLabel = p.metodo === 'transferencia' ? 'Transferencia' : p.metodo === 'efectivo' ? 'Efectivo' : '—'
 
       const tr = document.createElement('tr')
       tr.innerHTML = `
-        <td><strong>${est ? est.nombre : '—'}</strong>${est && est.folio ? `<br><span style="font-size:.7rem;opacity:.5">Folio ${est.folio}</span>` : ''}</td>
-        <td>${clase ? clase.nombre : '—'}</td>
-        <td>${maestro ? maestro.nombre : '—'}</td>
+        <td>
+          <strong>${est ? est.nombre : '—'}</strong>
+          ${est && est.folio ? `<br><span style="font-size:.7rem;opacity:.5">Folio ${est.folio}</span>` : ''}
+        </td>
         <td>${mesLabel}</td>
         <td><strong>$${Number(p.monto).toLocaleString('es-MX')}</strong></td>
         <td>${metodLabel}</td>
@@ -115,6 +103,9 @@ async function cargarPagos() {
             ${p.estado !== 'pendiente'
               ? `<button class="btn-accion btn-accion-recibo" onclick="generarRecibo(${p.id_pago})">Recibo</button>`
               : ''}
+            <button class="btn-accion btn-accion-eliminar" onclick="confirmarEliminar(${p.id_pago})" title="Eliminar cargo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
           </div>
         </td>`
       body.appendChild(tr)
@@ -136,9 +127,9 @@ function badgeEstado(estado) {
   return `<span class="badge-estado ${cls}"><span class="dot-badge ${dot}"></span>${label}</span>`
 }
 
-// --- Modal pago ---
+// --- Modal registrar/editar pago ---
 function abrirModalPago(id) {
-  const pago = pagosData.find(p => p.id_pago === id)   // ← id_pago
+  const pago = pagosData.find(p => p.id_pago === id)
   if (!pago) return
 
   pagoEditandoId     = id
@@ -204,16 +195,11 @@ document.getElementById('modalPagoGuardar').addEventListener('click', async () =
     if (!res.ok) { errEl.textContent = data.message || 'Error.'; errEl.style.display = 'block'; return }
 
     document.getElementById('modalPago').style.display = 'none'
-
-    // Actualizar pagosData localmente para generarRecibo
     const idx = pagosData.findIndex(p => p.id_pago === pagoEditandoId)
     if (idx !== -1) pagosData[idx] = data.pago
 
     await cargarPagos()
-
-    if (estadoSeleccionado !== 'pendiente') {
-      setTimeout(() => generarRecibo(pagoEditandoId), 300)
-    }
+    if (estadoSeleccionado !== 'pendiente') setTimeout(() => generarRecibo(pagoEditandoId), 300)
   } catch (err) {
     errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'
   } finally {
@@ -223,16 +209,52 @@ document.getElementById('modalPagoGuardar').addEventListener('click', async () =
   }
 })
 
+// --- Modal eliminar cargo ---
+function confirmarEliminar(id) {
+  pagoEliminandoId = id
+  document.getElementById('modalEliminar').style.display = 'flex'
+}
+
+document.getElementById('modalEliminarCancelar').addEventListener('click', () => {
+  document.getElementById('modalEliminar').style.display = 'none'
+  pagoEliminandoId = null
+})
+
+document.getElementById('modalEliminarConfirmar').addEventListener('click', async () => {
+  if (!pagoEliminandoId) return
+
+  const btn = document.getElementById('modalEliminarConfirmar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
+  try {
+    const res = await fetch(`/api/pagos/${pagoEliminandoId}`, { method: 'DELETE', headers })
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.message || 'Error al eliminar.')
+      return
+    }
+    document.getElementById('modalEliminar').style.display = 'none'
+    pagoEliminandoId = null
+    await cargarPagos()
+  } catch (err) {
+    alert('Error de conexión.')
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+})
+
 // --- Generar recibo PDF ---
 function generarRecibo(pagoId) {
-  const pago = pagosData.find(p => p.id_pago === pagoId)   // ← id_pago
+  const pago = pagosData.find(p => p.id_pago === pagoId)
   if (!pago) return
 
-  const est     = estudiantesData.find(e => e.id_estudiante === pago.id_estudiante)
-  const clase   = clasesData.find(c => c.id_clase === pago.id_clase)
-  const maestro = maestrosData.find(m => m.id_maestro === (est ? est.id_maestro : null))
-  const fechaMes  = pago.mes ? new Date(pago.mes + 'T12:00:00') : null
-  const mesLabel  = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
+  const est      = estudiantesData.find(e => e.id_estudiante === pago.id_estudiante)
+  const fechaMes = pago.mes ? new Date(pago.mes + 'T12:00:00') : null
+  const mesLabel = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
   const fechaPago = pago.fecha_pago ? new Date(pago.fecha_pago).toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' }) : '—'
   const folio     = String(pagoId).padStart(6, '0')
 
@@ -246,8 +268,6 @@ function generarRecibo(pagoId) {
     <div class="rt">Detalle del pago</div>
     <div class="fi"><label>Alumno</label><span>${est ? est.nombre : '—'}</span></div>
     ${est && est.folio ? `<div class="fi"><label>Folio</label><span>${est.folio}</span></div>` : ''}
-    <div class="fi"><label>Clase</label><span>${clase ? clase.nombre : '—'}</span></div>
-    <div class="fi"><label>Maestro</label><span>${maestro ? maestro.nombre : '—'}</span></div>
     <div class="fi"><label>Periodo</label><span>${mesLabel}</span></div>
     <div class="fi"><label>Método</label><span>${pago.metodo === 'transferencia' ? 'Transferencia' : 'Efectivo'}</span></div>
     <div class="fi"><label>Fecha de pago</label><span>${fechaPago}</span></div>
@@ -265,8 +285,9 @@ function generarRecibo(pagoId) {
   v.document.close()
 }
 
-window.abrirModalPago = abrirModalPago
-window.generarRecibo  = generarRecibo
+window.abrirModalPago   = abrirModalPago
+window.generarRecibo    = generarRecibo
+window.confirmarEliminar = confirmarEliminar
 
 // --- Modal generar cargos ---
 document.getElementById('btnCargoManual').addEventListener('click', () => {

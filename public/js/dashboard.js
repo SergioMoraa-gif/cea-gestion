@@ -68,20 +68,14 @@ async function cargarEstadisticas() {
   try {
     const headers = { 'Authorization': `Bearer ${token}` }
 
-    const [resEst, resClases, resPagos] = await Promise.all([
+    const [resEst, resPagos] = await Promise.all([
       fetch('/api/estudiantes/count', { headers }),
-      fetch('/api/clases/count',      { headers }),
       fetch('/api/pagos/pendientes',  { headers })
     ])
 
     if (resEst.ok) {
       const data = await resEst.json()
       document.getElementById('totalEstudiantes').textContent = data.total ?? '0'
-    }
-
-    if (resClases.ok) {
-      const data = await resClases.json()
-      document.getElementById('totalClases').textContent = data.total ?? '0'
     }
 
     if (resPagos.ok) {
@@ -91,9 +85,7 @@ async function cargarEstadisticas() {
 
   } catch (err) {
     console.error('Error cargando estadísticas:', err)
-    // Si falla, mostrar 0 en lugar de —
     document.getElementById('totalEstudiantes').textContent = '0'
-    document.getElementById('totalClases').textContent      = '0'
     document.getElementById('totalPagos').textContent       = '0'
   }
 }

@@ -1,9 +1,6 @@
 // ================================
 // estudiantes.js — CEA Sistema de Gestión
-// Refactorizado: esquema nuevo
-// - Ya no se envía maestro_id al crear estudiante
-// - clase_id sigue funcionando (el controller la inscribe en EstudiantesClases)
-// - Los datos de clase/maestro vienen aplanados desde el controller
+// Nuevo flujo: crear alumno → botones maestros → calendario → precio
 // ================================
 
 const token = sessionStorage.getItem('cea_token')
@@ -11,13 +8,9 @@ if (!token) window.location.href = 'index.html'
 
 const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
 
-const MODALIDADES = { LM: 'Lun / Mié', MJ: 'Mar / Jue', viernes: 'Viernes', sabado: 'Sábado' }
-
-let clasesData           = []
-let maestrosData         = []
-let estudiantesData      = []
-let estudianteBajaId     = null
-let estudianteEliminarId = null
+let estudiantesData  = []
+let maestrosData     = []
+let estudianteNuevoId = null  // ID del alumno recién creado (durante inscripción)
 let estudianteEditandoId = null
 
 // --- Sidebar ---
@@ -26,337 +19,308 @@ const sidebarBackdrop = document.getElementById('sidebarBackdrop')
 document.getElementById('btnMenu').addEventListener('click', () => { sidebar.classList.add('open'); sidebarBackdrop.classList.add('show') })
 document.getElementById('sidebarClose').addEventListener('click', cerrarSidebar)
 sidebarBackdrop.addEventListener('click', cerrarSidebar)
-document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarSidebar() })
 function cerrarSidebar() { sidebar.classList.remove('open'); sidebarBackdrop.classList.remove('show') }
 document.getElementById('btnLogout').addEventListener('click', () => { sessionStorage.clear(); window.location.href = 'index.html' })
 
-// --- Formulario nuevo ---
-const formCard  = document.getElementById('formCard')
-const formError = document.getElementById('formError')
-
-document.getElementById('btnNuevo').addEventListener('click', () => {
-  document.getElementById('inputNombre').value = ''
-  document.getElementById('inputFolio').value  = ''
-  document.getElementById('inputClase').value  = ''
-  document.getElementById('infoClase').style.display = 'none'
-  ocultarError()
-  formCard.style.display = 'block'
-  document.getElementById('inputNombre').focus()
-})
-
-document.getElementById('btnCerrarForm').addEventListener('click', cerrarForm)
-document.getElementById('btnCancelar').addEventListener('click', cerrarForm)
-function cerrarForm() { formCard.style.display = 'none'; ocultarError() }
-
-// --- Info clase al seleccionar ---
-document.getElementById('inputClase').addEventListener('change', function () {
-  const id    = parseInt(this.value)
-  const clase = clasesData.find(c => c.id_clase === id)
-  const info  = document.getElementById('infoClase')
-
-  if (!clase) { info.style.display = 'none'; return }
-
-  // id_maestro en el nuevo esquema
-  const maestro = maestrosData.find(m => m.id_maestro === clase.id_maestro)
-  document.getElementById('infoMaestroNombre').textContent = maestro ? maestro.nombre : 'Sin maestro'
-  document.getElementById('infoModalidad').textContent     = MODALIDADES[clase.modalidad] || clase.modalidad
-  document.getElementById('infoCosto').textContent         = `$${Number(clase.costo_mensual).toLocaleString('es-MX')}/mes`
-  info.style.display = 'block'
-})
-
-// --- Guardar nuevo estudiante ---
-document.getElementById('btnGuardar').addEventListener('click', async () => {
-  const nombre   = document.getElementById('inputNombre').value.trim()
-  const folio    = document.getElementById('inputFolio').value.trim()
-  const clase_id = document.getElementById('inputClase').value
-
-  if (!nombre)   return mostrarError('El nombre del niño es requerido.')
-  if (!clase_id) return mostrarError('Selecciona una clase.')
-
-  // Obtener id_maestro de la clase para redirección al calendario
-  const clase      = clasesData.find(c => c.id_clase === parseInt(clase_id))
-  const id_maestro = clase ? clase.id_maestro : null
-
-  setLoading(true)
-  ocultarError()
-
-  try {
-    // Ya NO se envía maestro_id — el controller maneja la inscripción en EstudiantesClases
-    const res  = await fetch('/api/estudiantes', {
-      method: 'POST', headers,
-      body: JSON.stringify({ nombre, folio, clase_id: parseInt(clase_id) })
-    })
-    const data = await res.json()
-    if (!res.ok) return mostrarError(data.message || 'Error al guardar.')
-
-    cerrarForm()
-
-    // Redirigir al calendario del maestro para asignar horario
-    if (id_maestro) {
-      window.location.href = `perfil-maestro.html?id=${id_maestro}&nuevo=${data.estudiante.id_estudiante}`
-    } else {
-      cargarEstudiantes()
-    }
-  } catch (err) {
-    mostrarError('Error de conexión.')
-  } finally {
-    setLoading(false)
-  }
-})
-
-// --- Cargar datos iniciales ---
+// --- Cargar datos ---
 async function cargarDatos() {
   try {
-    const [resClases, resMaestros] = await Promise.all([
-      fetch('/api/clases',   { headers }),
-      fetch('/api/maestros', { headers })
+    const [resEst, resMae] = await Promise.all([
+      fetch('/api/estudiantes', { headers }),
+      fetch('/api/maestros',    { headers })
     ])
-    const dc = await resClases.json()
-    const dm = await resMaestros.json()
-
-    clasesData   = (dc.clases   || []).filter(c => c.activa !== false)
-    maestrosData = dm.maestros  || []
-
-    // Llenar selector de clases en formulario nuevo
-    const selClase = document.getElementById('inputClase')
-    selClase.innerHTML = '<option value="">— Selecciona una clase —</option>'
-    clasesData.forEach(c => {
-      const maestro = maestrosData.find(m => m.id_maestro === c.id_maestro)
-      const opt = document.createElement('option')
-      opt.value       = c.id_clase   // ← id_clase
-      opt.textContent = `${c.nombre} — ${maestro ? maestro.nombre : 'Sin maestro'} (${MODALIDADES[c.modalidad] || c.modalidad})`
-      selClase.appendChild(opt)
-    })
-
-    // Llenar selector de clases en modal editar
-    const selEdit = document.getElementById('editClase')
-    selEdit.innerHTML = '<option value="">— Selecciona una clase —</option>'
-    clasesData.forEach(c => {
-      const maestro = maestrosData.find(m => m.id_maestro === c.id_maestro)
-      const opt = document.createElement('option')
-      opt.value       = c.id_clase
-      opt.textContent = `${c.nombre} — ${maestro ? maestro.nombre : 'Sin maestro'}`
-      selEdit.appendChild(opt)
-    })
-
-    // Llenar filtro de maestros
-    const filtroMaestro = document.getElementById('filtroMaestro')
-    filtroMaestro.innerHTML = '<option value="">Todos los maestros</option>'
-    maestrosData.filter(m => m.activo !== false).forEach(m => {
-      const opt = document.createElement('option')
-      opt.value = m.id_maestro; opt.textContent = m.nombre
-      filtroMaestro.appendChild(opt)
-    })
-
+    estudiantesData = (await resEst.json()).estudiantes || []
+    maestrosData    = ((await resMae.json()).maestros || []).filter(m => m.activo !== false)
+    renderTabla()
   } catch (err) {
-    console.error('Error cargando datos:', err)
+    document.getElementById('loadingMsg').textContent = 'Error al cargar datos.'
   }
 }
 
-// --- Cargar lista de estudiantes ---
-async function cargarEstudiantes() {
-  const body         = document.getElementById('tablaBody')
+// --- Renderizar tabla ---
+function renderTabla() {
   const loadingMsg   = document.getElementById('loadingMsg')
   const emptyMsg     = document.getElementById('emptyMsg')
   const tablaWrapper = document.getElementById('tablaWrapper')
+  const body         = document.getElementById('tablaBody')
 
+  loadingMsg.style.display   = 'none'
   body.innerHTML = ''
-  loadingMsg.style.display   = 'block'
-  emptyMsg.style.display     = 'none'
-  tablaWrapper.style.display = 'none'
 
-  const busqueda    = document.getElementById('buscador').value.toLowerCase()
-  const estado      = document.getElementById('filtroEstado').value
-  const maestroFilt = document.getElementById('filtroMaestro').value
+  const filtroEstado  = document.getElementById('filtroEstado').value
+  const busqueda      = document.getElementById('buscador').value.toLowerCase()
 
-  try {
-    const res  = await fetch('/api/estudiantes', { headers })
-    const data = await res.json()
-    estudiantesData = data.estudiantes || []
-    let lista       = estudiantesData
+  let lista = estudiantesData
+  if (filtroEstado === 'activos')   lista = lista.filter(e => e.activo)
+  if (filtroEstado === 'inactivos') lista = lista.filter(e => !e.activo)
+  if (busqueda) lista = lista.filter(e =>
+    e.nombre.toLowerCase().includes(busqueda) ||
+    (e.folio || '').toLowerCase().includes(busqueda)
+  )
 
-    // Filtros — el controller ya devuelve id_maestro y clase_id aplanados
-    if (busqueda)    lista = lista.filter(e => e.nombre.toLowerCase().includes(busqueda) || (e.folio || '').toLowerCase().includes(busqueda))
-    if (estado === 'activos')   lista = lista.filter(e => e.activo !== false)
-    if (estado === 'inactivos') lista = lista.filter(e => e.activo === false)
-    if (maestroFilt) lista = lista.filter(e => String(e.id_maestro) === maestroFilt)
+  if (lista.length === 0) { emptyMsg.style.display = 'block'; tablaWrapper.style.display = 'none'; return }
+  emptyMsg.style.display = 'none'; tablaWrapper.style.display = 'block'
 
-    loadingMsg.style.display = 'none'
-    if (lista.length === 0) { emptyMsg.style.display = 'block'; return }
-    tablaWrapper.style.display = 'block'
-
-    lista.forEach(e => {
-      const clase   = clasesData.find(c => c.id_clase === e.id_clase)
-      const maestro = maestrosData.find(m => m.id_maestro === e.id_maestro)
-
-      const tr = document.createElement('tr')
-      if (e.activo === false) tr.classList.add('inactivo')
-
-      tr.innerHTML = `
-        <td><strong>${e.folio || '—'}</strong></td>
-        <td>${e.nombre}</td>
-        <td>${clase ? clase.nombre : (e.clase_nombre || '—')}</td>
-        <td>${maestro ? maestro.nombre : '—'}</td>
-        <td>${clase ? (MODALIDADES[clase.modalidad] || clase.modalidad) : (e.clase_modalidad || '—')}</td>
-        <td>${e.activo !== false
-          ? '<span class="badge-activo">Activo</span>'
-          : '<span class="badge-inactivo">Inactivo</span>'}</td>
-        <td>
-          <div class="acciones">
-            ${e.activo !== false ? `
-              <button class="btn-accion btn-accion-editar"     onclick="abrirEditar(${e.id_estudiante})">Editar</button>
-              <button class="btn-accion btn-accion-calendario" onclick="irCalendario(${e.id_maestro}, ${e.id_estudiante})">Horario</button>
-              <button class="btn-accion btn-accion-baja"       onclick="confirmarBaja(${e.id_estudiante})">Dar de baja</button>
-            ` : `
-              <button class="btn-accion btn-accion-reactivar"  onclick="reactivarEstudiante(${e.id_estudiante})">Reactivar</button>
-              <button class="btn-accion btn-accion-eliminar"   onclick="confirmarEliminar(${e.id_estudiante})">Eliminar</button>
-            `}
-          </div>
-        </td>
-      `
-      body.appendChild(tr)
-    })
-
-  } catch (err) {
-    loadingMsg.textContent = 'Error al cargar estudiantes.'
-  }
+  lista.forEach(e => {
+    const tr = document.createElement('tr')
+    tr.innerHTML = `
+      <td>${e.folio || '—'}</td>
+      <td><strong>${e.nombre}</strong></td>
+      <td>${e.telefono || '—'}</td>
+      <td><strong>$${Number(e.precio_mensual || 0).toLocaleString('es-MX')}</strong></td>
+      <td><span class="badge-estado ${e.activo ? 'badge-activo' : 'badge-inactivo'}">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td>
+        <div class="acciones">
+          <button class="btn-accion btn-accion-perfil"  onclick="verPerfil(${e.id_estudiante})">Ver perfil</button>
+          <button class="btn-accion btn-accion-horario" onclick="irCalendario(${e.id_estudiante})">Horario</button>
+          <button class="btn-accion btn-accion-editar"  onclick="abrirEditar(${e.id_estudiante})">Editar</button>
+          ${e.activo
+            ? `<button class="btn-accion btn-accion-baja" onclick="abrirBaja(${e.id_estudiante})">Dar de baja</button>`
+            : `<button class="btn-accion btn-accion-reactivar" onclick="reactivar(${e.id_estudiante})">Reactivar</button>`
+          }
+          <button class="btn-accion btn-accion-eliminar" onclick="abrirEliminar(${e.id_estudiante})">Eliminar</button>
+        </div>
+      </td>`
+    body.appendChild(tr)
+  })
 }
 
-// --- Ir al calendario ---
-function irCalendario(id_maestro, id_estudiante) {
-  if (!id_maestro) return alert('Este estudiante no tiene maestro asignado.')
-  window.location.href = `perfil-maestro.html?id=${id_maestro}&estudiante=${id_estudiante}`
+// Ir al perfil del estudiante
+function verPerfil(estudianteId) {
+  window.location.href = `perfil-estudiante.html?id=${estudianteId}`
 }
 
-// --- Editar ---
-async function abrirEditar(id) {
-  try {
-    const res  = await fetch(`/api/estudiantes/${id}`, { headers })
-    const data = await res.json()
-    const e    = data.estudiante
-
-    estudianteEditandoId = id
-    document.getElementById('editNombre').value = e.nombre
-    document.getElementById('editFolio').value  = e.folio || ''
-    document.getElementById('editClase').value  = e.id_clase || ''
-    document.getElementById('editError').style.display  = 'none'
-    document.getElementById('modalEditar').style.display = 'flex'
-  } catch (err) { alert('Error al cargar datos.') }
+// Ir al calendario del primer maestro disponible para asignar horario a alumno existente
+function irCalendario(estudianteId) {
+  if (maestrosData.length === 0) return alert('No hay maestros registrados.')
+  // Mostrar selector de maestro
+  const maestro = maestrosData[0]
+  window.location.href = `perfil-maestro.html?id=${maestro.id_maestro}&nuevo=${estudianteId}`
 }
 
-document.getElementById('modalEditarCerrar').addEventListener('click',   () => { document.getElementById('modalEditar').style.display = 'none' })
-document.getElementById('modalEditarCancelar').addEventListener('click', () => { document.getElementById('modalEditar').style.display = 'none' })
+// --- Formulario nuevo estudiante ---
+document.getElementById('btnNuevo').addEventListener('click', () => {
+  estudianteNuevoId = null
+  document.getElementById('inputNombre').value = ''
+  document.getElementById('inputFolio').value  = ''
+  document.getElementById('inputTelefono').value = ''
+  document.getElementById('inputPrecio').value = ''
+  document.getElementById('formError').style.display = 'none'
+  document.getElementById('seccionMaestros').style.display = 'none'
+  document.getElementById('btnGuardar').style.display = 'inline-flex'
+  document.getElementById('formCard').style.display = 'block'
+})
 
-document.getElementById('modalEditarGuardar').addEventListener('click', async () => {
-  const nombre   = document.getElementById('editNombre').value.trim()
-  const folio    = document.getElementById('editFolio').value.trim()
-  const clase_id = document.getElementById('editClase').value
-  const errEl    = document.getElementById('editError')
+document.getElementById('btnCerrarForm').addEventListener('click', cerrarFormulario)
+document.getElementById('btnCancelar').addEventListener('click', cerrarFormulario)
+
+function cerrarFormulario() {
+  document.getElementById('formCard').style.display = 'none'
+  estudianteNuevoId = null
+  cargarDatos()
+}
+
+// Paso 1: Crear el alumno
+document.getElementById('btnGuardar').addEventListener('click', async () => {
+  const nombre   = document.getElementById('inputNombre').value.trim()
+  const folio    = document.getElementById('inputFolio').value.trim()
+  const telefono = document.getElementById('inputTelefono').value.trim()
+  const errEl    = document.getElementById('formError')
 
   if (!nombre) { errEl.textContent = 'El nombre es requerido.'; errEl.style.display = 'block'; return }
 
-  const clase      = clasesData.find(c => c.id_clase === parseInt(clase_id))
-  const id_maestro = clase ? clase.id_maestro : null
-
-  // Verificar si cambió la clase para borrar horarios anteriores
-  const estAnterior  = estudiantesData.find(e => e.id_estudiante === estudianteEditandoId)
-  const cambioClase  = estAnterior && String(estAnterior.id_clase) !== String(clase_id)
-
-  const btnG = document.getElementById('modalEditarGuardar')
-  btnG.disabled = true
-  btnG.querySelector('.btn-text').style.display   = 'none'
-  btnG.querySelector('.btn-loader').style.display = 'flex'
+  const btn = document.getElementById('btnGuardar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+  errEl.style.display = 'none'
 
   try {
-    // Si cambió la clase, borrar horarios anteriores
-    if (cambioClase) {
-      await fetch(`/api/horarios/estudiante/${estudianteEditandoId}`, { method: 'DELETE', headers })
-    }
-
-    const res = await fetch(`/api/estudiantes/${estudianteEditandoId}`, {
-      method: 'PUT', headers,
-      body: JSON.stringify({ nombre, folio, clase_id: parseInt(clase_id) })
+    const res  = await fetch('/api/estudiantes', {
+      method: 'POST', headers,
+      body: JSON.stringify({ nombre, folio, telefono, precio_mensual: 0 })
     })
     const data = await res.json()
     if (!res.ok) { errEl.textContent = data.message || 'Error.'; errEl.style.display = 'block'; return }
 
-    document.getElementById('modalEditar').style.display = 'none'
+    estudianteNuevoId = data.estudiante.id_estudiante
 
-    // Si cambió la clase, redirigir al calendario para reasignar horario
-    if (cambioClase && id_maestro) {
-      window.location.href = `perfil-maestro.html?id=${id_maestro}&nuevo=${estudianteEditandoId}`
-    } else {
-      cargarEstudiantes()
-    }
+    // Mostrar botones de maestros
+    document.getElementById('btnGuardar').style.display = 'none'
+    mostrarBotonesMaestros()
+    document.getElementById('seccionMaestros').style.display = 'block'
+
   } catch (err) {
     errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'
   } finally {
-    btnG.disabled = false
-    btnG.querySelector('.btn-text').style.display   = 'inline'
-    btnG.querySelector('.btn-loader').style.display = 'none'
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
   }
 })
 
-// --- Dar de baja ---
-function confirmarBaja(id) {
-  estudianteBajaId = id
-  document.getElementById('modalBaja').style.display = 'flex'
+// Mostrar botones de maestros disponibles
+function mostrarBotonesMaestros() {
+  const contenedor = document.getElementById('maestrosBtns')
+  contenedor.innerHTML = ''
+  maestrosData.forEach(m => {
+    const btn = document.createElement('button')
+    btn.className = 'btn-maestro'
+    btn.textContent = m.nombre
+    btn.addEventListener('click', () => {
+      window.location.href = `perfil-maestro.html?id=${m.id_maestro}&nuevo=${estudianteNuevoId}`
+    })
+    contenedor.appendChild(btn)
+  })
 }
-document.getElementById('modalBajaCancelar').addEventListener('click', () => { document.getElementById('modalBaja').style.display = 'none'; estudianteBajaId = null })
-document.getElementById('modalBajaConfirmar').addEventListener('click', async () => {
-  if (!estudianteBajaId) return
+
+// Paso 2: Finalizar inscripción guardando precio
+document.getElementById('btnFinalizarInscripcion').addEventListener('click', async () => {
+  const precio = parseFloat(document.getElementById('inputPrecio').value) || 0
+  const errEl  = document.getElementById('formError')
+
+  if (!estudianteNuevoId) return
+
+  const btn = document.getElementById('btnFinalizarInscripcion')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
   try {
-    const res = await fetch(`/api/estudiantes/${estudianteBajaId}/baja`, { method: 'PATCH', headers })
-    if (res.ok) { document.getElementById('modalBaja').style.display = 'none'; cargarEstudiantes() }
-  } catch (err) { alert('Error.') }
-  estudianteBajaId = null
+    // Obtener datos actuales del alumno para no perderlos
+    const resEst  = await fetch(`/api/estudiantes/${estudianteNuevoId}`, { headers })
+    const dataEst = await resEst.json()
+    const est     = dataEst.estudiante
+
+    await fetch(`/api/estudiantes/${estudianteNuevoId}`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({
+        nombre:         est.nombre,
+        folio:          est.folio,
+        telefono:       est.telefono,
+        precio_mensual: precio
+      })
+    })
+
+    // Generar primer cargo
+    const hoy = new Date()
+    const mes = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-01`
+    await fetch('/api/pagos', {
+      method: 'POST', headers,
+      body: JSON.stringify({ id_estudiante: estudianteNuevoId, mes, monto: precio })
+    })
+
+    cerrarFormulario()
+  } catch (err) {
+    errEl.textContent = 'Error al guardar.'; errEl.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+})
+
+// --- Editar ---
+function abrirEditar(id) {
+  const est = estudiantesData.find(e => e.id_estudiante === id)
+  if (!est) return
+  estudianteEditandoId = id
+  document.getElementById('editNombre').value   = est.nombre || ''
+  document.getElementById('editFolio').value    = est.folio  || ''
+  document.getElementById('editTelefono').value = est.telefono || ''
+  document.getElementById('editPrecio').value   = est.precio_mensual || 0
+  document.getElementById('editError').style.display = 'none'
+  document.getElementById('modalEditar').style.display = 'flex'
+}
+
+document.getElementById('modalEditarCerrar').addEventListener('click',   () => document.getElementById('modalEditar').style.display = 'none')
+document.getElementById('modalEditarCancelar').addEventListener('click', () => document.getElementById('modalEditar').style.display = 'none')
+
+document.getElementById('modalEditarGuardar').addEventListener('click', async () => {
+  const nombre   = document.getElementById('editNombre').value.trim()
+  const folio    = document.getElementById('editFolio').value.trim()
+  const telefono = document.getElementById('editTelefono').value.trim()
+  const precio   = parseFloat(document.getElementById('editPrecio').value) || 0
+  const errEl    = document.getElementById('editError')
+
+  if (!nombre) { errEl.textContent = 'El nombre es requerido.'; errEl.style.display = 'block'; return }
+
+  const btn = document.getElementById('modalEditarGuardar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+  errEl.style.display = 'none'
+
+  try {
+    const res  = await fetch(`/api/estudiantes/${estudianteEditandoId}`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ nombre, folio, telefono, precio_mensual: precio })
+    })
+    const data = await res.json()
+    if (!res.ok) { errEl.textContent = data.message || 'Error.'; errEl.style.display = 'block'; return }
+    document.getElementById('modalEditar').style.display = 'none'
+    cargarDatos()
+  } catch (err) {
+    errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+})
+
+// --- Baja ---
+let idBaja = null
+function abrirBaja(id) { idBaja = id; document.getElementById('modalBaja').style.display = 'flex' }
+document.getElementById('modalBajaCancelar').addEventListener('click', () => document.getElementById('modalBaja').style.display = 'none')
+document.getElementById('modalBajaConfirmar').addEventListener('click', async () => {
+  if (!idBaja) return
+  await fetch(`/api/estudiantes/${idBaja}/baja`, { method: 'PATCH', headers })
+  document.getElementById('modalBaja').style.display = 'none'
+  idBaja = null
+  cargarDatos()
 })
 
 // --- Reactivar ---
-async function reactivarEstudiante(id) {
-  try {
-    const res = await fetch(`/api/estudiantes/${id}/reactivar`, { method: 'PATCH', headers })
-    if (res.ok) cargarEstudiantes()
-    else alert('Error al reactivar.')
-  } catch (err) { alert('Error de conexión.') }
+async function reactivar(id) {
+  await fetch(`/api/estudiantes/${id}/reactivar`, { method: 'PATCH', headers })
+  cargarDatos()
 }
 
 // --- Eliminar ---
-function confirmarEliminar(id) {
-  estudianteEliminarId = id
-  document.getElementById('modalEliminar').style.display = 'flex'
-}
-document.getElementById('modalEliminarCancelar').addEventListener('click', () => { document.getElementById('modalEliminar').style.display = 'none'; estudianteEliminarId = null })
+let idEliminar = null
+function abrirEliminar(id) { idEliminar = id; document.getElementById('modalEliminar').style.display = 'flex' }
+document.getElementById('modalEliminarCancelar').addEventListener('click', () => document.getElementById('modalEliminar').style.display = 'none')
 document.getElementById('modalEliminarConfirmar').addEventListener('click', async () => {
-  if (!estudianteEliminarId) return
-  try {
-    const res = await fetch(`/api/estudiantes/${estudianteEliminarId}`, { method: 'DELETE', headers })
-    if (res.ok) { document.getElementById('modalEliminar').style.display = 'none'; cargarEstudiantes() }
-    else alert('No se puede eliminar, tiene datos relacionados.')
-  } catch (err) { alert('Error de conexión.') }
-  estudianteEliminarId = null
+  if (!idEliminar) return
+  await fetch(`/api/estudiantes/${idEliminar}`, { method: 'DELETE', headers })
+  document.getElementById('modalEliminar').style.display = 'none'
+  idEliminar = null
+  cargarDatos()
 })
 
 // --- Filtros ---
-document.getElementById('buscador').addEventListener('input',       cargarEstudiantes)
-document.getElementById('filtroEstado').addEventListener('change',  cargarEstudiantes)
-document.getElementById('filtroMaestro').addEventListener('change', cargarEstudiantes)
+document.getElementById('buscador').addEventListener('input', renderTabla)
+document.getElementById('filtroEstado').addEventListener('change', renderTabla)
 
-// --- Helpers ---
-function mostrarError(msg) { formError.textContent = msg; formError.style.display = 'block' }
-function ocultarError()    { formError.style.display = 'none' }
-function setLoading(estado) {
-  const btn = document.getElementById('btnGuardar')
-  btn.disabled = estado
-  btn.querySelector('.btn-text').style.display   = estado ? 'none'  : 'inline'
-  btn.querySelector('.btn-loader').style.display = estado ? 'flex'  : 'none'
+// Exponer funciones globales
+window.abrirEditar   = abrirEditar
+window.abrirBaja     = abrirBaja
+window.abrirEliminar = abrirEliminar
+window.reactivar     = reactivar
+window.irCalendario  = irCalendario
+
+// Si regresa del calendario con ?regreso=id, mostrar sección de precio
+const urlParams = new URLSearchParams(window.location.search)
+const regresoId = urlParams.get('regreso')
+if (regresoId) {
+  estudianteNuevoId = parseInt(regresoId)
+  cargarDatos().then(() => {
+    document.getElementById('btnGuardar').style.display = 'none'
+    mostrarBotonesMaestros()
+    document.getElementById('seccionMaestros').style.display = 'block'
+    document.getElementById('formCard').style.display = 'block'
+  })
+} else {
+  cargarDatos()
 }
-
-window.abrirEditar         = abrirEditar
-window.irCalendario        = irCalendario
-window.confirmarBaja       = confirmarBaja
-window.reactivarEstudiante = reactivarEstudiante
-window.confirmarEliminar   = confirmarEliminar
-
-// --- Iniciar ---
-cargarDatos().then(() => cargarEstudiantes())

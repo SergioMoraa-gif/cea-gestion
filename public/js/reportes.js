@@ -1,8 +1,6 @@
 // ================================
 // reportes.js — CEA Sistema de Gestión
-// Refactorizado: esquema nuevo
-// id → id_maestro, id → id_estudiante, id → id_clase, id → id_pago
-// El filtro de maestro usa id_maestro aplanado desde el controller de estudiantes
+// Reporte mensual de pagos con horarios reales
 // ================================
 
 const token = sessionStorage.getItem('cea_token')
@@ -10,12 +8,14 @@ if (!token) window.location.href = 'index.html'
 
 const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
 
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 let estudiantesData = []
-let clasesData      = []
 let maestrosData    = []
+let horariosData    = []   // todos los horarios (para cruzar maestro ↔ alumno)
 let pagosData       = []
+let listaFiltrada   = []   // para exportar CSV
 
 // --- Sidebar ---
 const sidebar         = document.getElementById('sidebar')
@@ -26,29 +26,61 @@ sidebarBackdrop.addEventListener('click', cerrarSidebar)
 function cerrarSidebar() { sidebar.classList.remove('open'); sidebarBackdrop.classList.remove('show') }
 document.getElementById('btnLogout').addEventListener('click', () => { sessionStorage.clear(); window.location.href = 'index.html' })
 
-// --- Mes por defecto ---
+// --- Mes por defecto (mes actual) ---
 const hoy = new Date()
-document.getElementById('filtroMes').value = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`
+document.getElementById('filtroMes').value =
+  `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`
 
-// --- Cargar datos base ---
+// --- Cargar datos base (una sola vez) ---
 async function cargarDatos() {
   try {
-    const [resEst, resClases, resMaestros] = await Promise.all([
+    const [resEst, resMae, resHor] = await Promise.all([
       fetch('/api/estudiantes', { headers }),
-      fetch('/api/clases',      { headers }),
-      fetch('/api/maestros',    { headers })
+      fetch('/api/maestros',    { headers }),
+      fetch('/api/horarios/estudiante/todos', { headers }).catch(() => ({ ok: false }))
     ])
-    estudiantesData = (await resEst.json()).estudiantes   || []
-    clasesData      = (await resClases.json()).clases     || []
-    maestrosData    = (await resMaestros.json()).maestros || []
 
+    estudiantesData = (await resEst.json()).estudiantes   || []
+    maestrosData    = (await resMae.json()).maestros      || []
+
+    // Si el endpoint de "todos los horarios" no existe, cargamos por cada estudiante
+    // de forma diferida al primer reporte. Por ahora intentamos la ruta general.
+    if (resHor.ok) {
+      const dh = await resHor.json()
+      horariosData = dh.horarios || []
+    }
+
+    // Llenar selector de maestros
     const sel = document.getElementById('filtroMaestro')
     maestrosData.filter(m => m.activo !== false).forEach(m => {
       const opt = document.createElement('option')
-      opt.value = m.id_maestro; opt.textContent = m.nombre   // ← id_maestro
+      opt.value       = m.id_maestro
+      opt.textContent = m.nombre
       sel.appendChild(opt)
     })
-  } catch (err) { console.error('Error cargando datos:', err) }
+  } catch (err) {
+    console.error('Error cargando datos base:', err)
+  }
+}
+
+// Obtener los horarios de todos los alumnos que aparecen en los pagos del mes
+async function asegurarHorarios(idsEstudiante) {
+  const faltantes = idsEstudiante.filter(id =>
+    !horariosData.some(h => h.id_estudiante === id || h.estudiante_id === id)
+  )
+  if (faltantes.length === 0) return
+
+  try {
+    const peticiones = faltantes.map(id =>
+      fetch(`/api/horarios/estudiante/${id}`, { headers })
+        .then(r => r.json())
+        .then(d => d.horarios || [])
+    )
+    const resultados = await Promise.all(peticiones)
+    resultados.forEach(lista => { horariosData = horariosData.concat(lista) })
+  } catch (err) {
+    console.error('Error cargando horarios:', err)
+  }
 }
 
 // --- Cargar reporte ---
@@ -69,92 +101,176 @@ async function cargarReporte() {
   const maestroF = document.getElementById('filtroMaestro').value
   const estadoF  = document.getElementById('filtroEstado').value
 
+  // Actualizar subtítulo
   if (mes) {
     const [anio, mesNum] = mes.split('-')
-    document.getElementById('subtituloReporte').textContent = `${MESES[parseInt(mesNum)-1]} ${anio}`
+    document.getElementById('subtituloReporte').textContent =
+      `${MESES[parseInt(mesNum)-1]} ${anio}`
   }
 
   try {
+    // Traer pagos del mes (y estado si aplica)
     const params = new URLSearchParams()
     if (mes)     params.set('mes', mes)
     if (estadoF) params.set('estado', estadoF)
 
-    const res  = await fetch(`/api/pagos?${params}`, { headers })
+    const res = await fetch(`/api/pagos?${params}`, { headers })
+    if (!res.ok) throw new Error('Error en la API de pagos')
     const data = await res.json()
-    pagosData  = data.pagos || []
+    pagosData = data.pagos || []
 
-    // Filtro por maestro (local)
-    // estudiantesData ya trae id_maestro aplanado desde el controller
-    let lista = pagosData
-    if (maestroF) lista = lista.filter(p => {
-      const est = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
-      return est && String(est.id_maestro) === maestroF
+    // Asegurar que tenemos los horarios de todos los alumnos en estos pagos
+    const idsEst = [...new Set(pagosData.map(p => p.id_estudiante))]
+    await asegurarHorarios(idsEst)
+
+    // Construir mapa estudiante → maestros asignados
+    // { id_estudiante: [{ id_maestro, nombre }] }
+    const maestrosPorEst = {}
+    horariosData.forEach(h => {
+      const estId  = h.id_estudiante || h.estudiante_id
+      const maeId  = h.id_maestro   || h.maestro_id
+      if (!estId || !maeId) return
+      if (!maestrosPorEst[estId]) maestrosPorEst[estId] = new Set()
+      maestrosPorEst[estId].add(maeId)
     })
+
+    // Filtro por maestro (local, usando horarios)
+    let lista = pagosData
+    if (maestroF) {
+      lista = lista.filter(p => {
+        const mSet = maestrosPorEst[p.id_estudiante]
+        return mSet && mSet.has(parseInt(maestroF))
+      })
+    }
+
+    listaFiltrada = lista   // guardar para CSV
 
     loadingMsg.style.display = 'none'
 
-    // Totales
+    // --- Totales ---
     let cobrado = 0, pendiente = 0, transito = 0
     lista.forEach(p => {
-      if (p.estado === 'pagado')      cobrado   += Number(p.monto)
-      if (p.estado === 'pendiente')   pendiente += Number(p.monto)
-      if (p.estado === 'en_transito') transito  += Number(p.monto)
+      const m = Number(p.monto) || 0
+      if (p.estado === 'pagado')      cobrado   += m
+      if (p.estado === 'pendiente')   pendiente += m
+      if (p.estado === 'en_transito') transito  += m
     })
 
     document.getElementById('rCobrado').textContent   = `$${cobrado.toLocaleString('es-MX')}`
     document.getElementById('rPendiente').textContent = `$${pendiente.toLocaleString('es-MX')}`
     document.getElementById('rTransito').textContent  = `$${transito.toLocaleString('es-MX')}`
     document.getElementById('rTotal').textContent     = lista.length
+    document.getElementById('rTotalMes').textContent  =
+      `$${(cobrado + pendiente + transito).toLocaleString('es-MX')}`
 
     if (lista.length === 0) { emptyMsg.style.display = 'block'; return }
     tablaWrapper.style.display = 'block'
 
+    // --- Filas ---
     lista.forEach((p, i) => {
-      const est     = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
-      const clase   = clasesData.find(c => c.id_clase === p.id_clase)
-      const maestro = maestrosData.find(m => m.id_maestro === (est ? est.id_maestro : null))
+      const est = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
+
+      // Maestros asignados al alumno
+      const mSet     = maestrosPorEst[p.id_estudiante] || new Set()
+      const maestros = [...mSet].map(mid => {
+        const m = maestrosData.find(x => x.id_maestro === mid)
+        return m ? m.nombre : `#${mid}`
+      })
+
+      // Clases por semana (bloques únicos de horario)
+      const clasesAlumno = horariosData.filter(h =>
+        (h.id_estudiante || h.estudiante_id) === p.id_estudiante
+      )
+      const clasesLabel = clasesAlumno.length > 0
+        ? `${clasesAlumno.length} bloque${clasesAlumno.length !== 1 ? 's' : ''}`
+        : '—'
+
       const fechaPago = p.fecha_pago
         ? new Date(p.fecha_pago).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
         : '—'
-      const metodLabel = p.metodo === 'transferencia' ? 'Transferencia' : p.metodo === 'efectivo' ? 'Efectivo' : '—'
+      const metodLabel = p.metodo === 'transferencia' ? 'Transferencia'
+                       : p.metodo === 'efectivo'      ? 'Efectivo'
+                       : p.metodo || '—'
 
       const tr = document.createElement('tr')
       tr.innerHTML = `
-        <td style="color:rgba(255,255,255,.4);font-size:.75rem">${i+1}</td>
-        <td><strong>${est ? est.nombre : '—'}</strong></td>
-        <td>${clase ? clase.nombre : '—'}</td>
-        <td>${maestro ? maestro.nombre : '—'}</td>
-        <td><strong>$${Number(p.monto).toLocaleString('es-MX')}</strong></td>
+        <td class="col-num">${i + 1}</td>
+        <td>
+          <a class="link-perfil" href="perfil-estudiante.html?id=${p.id_estudiante}">
+            <strong>${est ? est.nombre : '—'}</strong>
+          </a>
+        </td>
+        <td class="col-folio">${est ? (est.folio || '—') : '—'}</td>
+        <td class="col-maestros">${maestros.length > 0 ? maestros.join(', ') : '—'}</td>
+        <td class="col-clases">${clasesLabel}</td>
+        <td><strong>$${Number(p.monto || 0).toLocaleString('es-MX')}</strong></td>
         <td>${metodLabel}</td>
-        <td style="font-size:.78rem">${fechaPago}</td>
+        <td class="col-fecha">${fechaPago}</td>
         <td>${badgeEstado(p.estado)}</td>
       `
       body.appendChild(tr)
     })
 
+    // --- Pie de tabla ---
     const totalGeneral = cobrado + pendiente + transito
     foot.innerHTML = `
       <tr>
-        <td colspan="4" style="text-align:right">Total general:</td>
+        <td colspan="5" style="text-align:right;padding-right:1rem">Total general:</td>
         <td><strong>$${totalGeneral.toLocaleString('es-MX')}</strong></td>
         <td colspan="3"></td>
       </tr>
     `
 
   } catch (err) {
-    loadingMsg.textContent = 'Error al cargar el reporte.'
+    loadingMsg.style.display = 'block'
+    loadingMsg.textContent   = 'Error al cargar el reporte.'
+    console.error(err)
   }
 }
 
 function badgeEstado(estado) {
   const map = {
-    pagado:      ['badge-pagado',     'dot-pagado',     'Pagado'],
-    pendiente:   ['badge-pendiente',  'dot-pendiente',  'Pendiente'],
-    en_transito: ['badge-en_transito','dot-en_transito','En tránsito']
+    pagado:      ['badge-pagado',      'dot-pagado',      'Pagado'],
+    pendiente:   ['badge-pendiente',   'dot-pendiente',   'Pendiente'],
+    en_transito: ['badge-en_transito', 'dot-en_transito', 'En tránsito']
   }
   const [cls, dot, label] = map[estado] || map.pendiente
   return `<span class="badge-estado ${cls}"><span class="dot-badge ${dot}"></span>${label}</span>`
 }
+
+// --- Descargar CSV ---
+document.getElementById('btnDescargar').addEventListener('click', () => {
+  if (listaFiltrada.length === 0) return alert('No hay datos para exportar.')
+
+  const mes = document.getElementById('filtroMes').value || 'reporte'
+  const filas = [
+    ['#', 'Alumno', 'Folio', 'Monto', 'Método', 'Fecha pago', 'Estado'],
+    ...listaFiltrada.map((p, i) => {
+      const est       = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
+      const fechaPago = p.fecha_pago
+        ? new Date(p.fecha_pago).toLocaleDateString('es-MX')
+        : ''
+      return [
+        i + 1,
+        est ? est.nombre : '',
+        est ? (est.folio || '') : '',
+        Number(p.monto || 0).toFixed(2),
+        p.metodo || '',
+        fechaPago,
+        p.estado || ''
+      ]
+    })
+  ]
+
+  const csv = filas.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `reporte-${mes}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+})
 
 // --- Imprimir ---
 document.getElementById('btnImprimir').addEventListener('click', () => window.print())

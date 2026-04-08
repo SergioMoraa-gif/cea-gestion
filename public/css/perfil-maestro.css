@@ -114,3 +114,14 @@
 .btn-baja:hover { background: rgba(220,38,38,0.5); }
 .spinner { width: 16px; height: 16px; animation: girar 0.8s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
+
+/* Modal asignar — tipo y duración */
+.modal-asignar-info { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.7); }
+.modal-asignar-alumno { font-weight: 700; color: #fff; }
+.modal-asignar-sep { color: rgba(255,255,255,0.3); }
+.modal-asignar-dia { color: #93c5fd; }
+
+.opciones-btns { display: flex; gap: 0.5rem; }
+.btn-tipo, .btn-duracion { padding: 0.55rem 1.1rem; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 999px; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 500; cursor: pointer; font-family: var(--font-main); transition: all 0.18s; }
+.btn-tipo:hover, .btn-duracion:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.btn-tipo.activo, .btn-duracion.activo { background: rgba(37,99,235,0.35); border-color: #2563eb; color: #fff; font-weight: 700; }

@@ -12,24 +12,17 @@
   <div class="bg-image"></div>
   <div class="bg-overlay"></div>
 
-  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <span class="sidebar-brand">CEA</span>
       <button class="sidebar-close" id="sidebarClose">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <nav class="sidebar-nav">
       <a href="dashboard.html" class="nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         <span>Dashboard</span>
-      </a>
-      <a href="clases.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        <span>Clases</span>
       </a>
       <a href="maestros.html" class="nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -43,6 +36,14 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Estudiantes</span>
       </a>
+      <a href="reportes.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>Reportes</span>
+      </a>
+      <a href="configuracion.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Configuración</span>
+      </a>
     </nav>
     <button class="btn-logout" id="btnLogout">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -55,11 +56,7 @@
 
     <header class="topbar">
       <button class="btn-menu" id="btnMenu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <line x1="3" y1="6" x2="21" y2="6"/>
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-info">
         <h1 class="topbar-title">Estudiantes</h1>
@@ -71,10 +68,10 @@
       </button>
     </header>
 
-    <!-- FORMULARIO -->
+    <!-- FORMULARIO NUEVO ESTUDIANTE -->
     <section class="form-card" id="formCard" style="display:none">
       <div class="form-card-header">
-        <h2 class="form-title" id="formTitle">Inscribir estudiante</h2>
+        <h2 class="form-title">Nuevo estudiante</h2>
         <button class="btn-cerrar-form" id="btnCerrarForm">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -82,32 +79,18 @@
 
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label">Nombre del niño</label>
+          <label class="form-label">Nombre del alumno</label>
           <input type="text" id="inputNombre" class="form-input" placeholder="Ej. Carlos López"/>
         </div>
         <div class="form-group">
           <label class="form-label">Folio</label>
-          <input type="text" id="inputFolio" class="form-input" placeholder="Ej. 01"/>
+          <input type="text" id="inputFolio" class="form-input" placeholder="Ej. 001"/>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Clase</label>
-        <select id="inputClase" class="form-input form-select">
-          <option value="">— Selecciona una clase —</option>
-        </select>
-      </div>
-
-      <div class="form-group info-clase" id="infoClase" style="display:none">
-        <div class="info-clase-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span id="infoMaestroNombre">—</span>
-          <span class="sep">·</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span id="infoModalidad">—</span>
-          <span class="sep">·</span>
-          <span id="infoCosto">—</span>
-        </div>
+        <label class="form-label">Teléfono</label>
+        <input type="text" id="inputTelefono" class="form-input" placeholder="Ej. 229 123 4567"/>
       </div>
 
       <div id="formError" class="form-error" style="display:none"></div>
@@ -115,11 +98,30 @@
       <div class="form-actions">
         <button class="btn-cancelar" id="btnCancelar">Cancelar</button>
         <button class="btn-guardar" id="btnGuardar">
-          <span class="btn-text">Guardar e ir al calendario</span>
+          <span class="btn-text">Crear y asignar horario</span>
           <span class="btn-loader" style="display:none">
             <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </span>
         </button>
+      </div>
+
+      <!-- Botones de maestros (aparecen después de crear el alumno) -->
+      <div id="seccionMaestros" style="display:none">
+        <div class="maestros-label">Selecciona un maestro para asignar horario:</div>
+        <div class="maestros-btns" id="maestrosBtns"></div>
+        <div class="maestros-hint">Puedes asignar bloques con varios maestros. Cuando termines, guarda el perfil del alumno.</div>
+        <div class="form-group" style="margin-top:1rem">
+          <label class="form-label">Precio mensual ($)</label>
+          <input type="number" id="inputPrecio" class="form-input" placeholder="Ej. 500" min="0" step="0.01"/>
+        </div>
+        <div class="form-actions" style="margin-top:1rem">
+          <button class="btn-guardar" id="btnFinalizarInscripcion">
+            <span class="btn-text">Finalizar inscripción</span>
+            <span class="btn-loader" style="display:none">
+              <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -131,25 +133,20 @@
         <option value="activos">Activos</option>
         <option value="inactivos">Inactivos</option>
       </select>
-      <select id="filtroMaestro" class="filtro-select">
-        <option value="">Todos los maestros</option>
-      </select>
     </section>
 
-    <!-- TABLA DE ESTUDIANTES -->
+    <!-- TABLA -->
     <section class="tabla-section">
       <div id="loadingMsg" class="loading-msg">Cargando estudiantes...</div>
-      <div id="emptyMsg"   class="empty-msg" style="display:none">No hay estudiantes registrados aún.</div>
-
+      <div id="emptyMsg" class="empty-msg" style="display:none">No hay estudiantes registrados aún.</div>
       <div class="tabla-wrapper" id="tablaWrapper" style="display:none">
         <table class="tabla">
           <thead>
             <tr>
               <th>Folio</th>
               <th>Nombre</th>
-              <th>Clase</th>
-              <th>Maestro</th>
-              <th>Modalidad</th>
+              <th>Teléfono</th>
+              <th>Precio mensual</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -163,7 +160,7 @@
 
   <!-- MODAL EDITAR -->
   <div class="modal-overlay" id="modalEditar" style="display:none">
-    <div class="modal-box modal-grande">
+    <div class="modal-box">
       <div class="modal-header">
         <h3 class="modal-title">Editar estudiante</h3>
         <button class="btn-cerrar-form" id="modalEditarCerrar">
@@ -181,8 +178,12 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Clase</label>
-        <select id="editClase" class="form-input form-select"></select>
+        <label class="form-label">Teléfono</label>
+        <input type="text" id="editTelefono" class="form-input"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Precio mensual ($)</label>
+        <input type="number" id="editPrecio" class="form-input" min="0" step="0.01"/>
       </div>
       <div id="editError" class="form-error" style="display:none"></div>
       <div class="modal-actions">
@@ -199,7 +200,7 @@
   <div class="modal-overlay" id="modalBaja" style="display:none">
     <div class="modal-box">
       <h3 class="modal-title">¿Dar de baja al estudiante?</h3>
-      <p class="modal-desc">El alumno quedará inactivo y el sistema dejará de generarle cobros mensuales. Puedes reactivarlo después.</p>
+      <p class="modal-desc">El alumno quedará inactivo. Puedes reactivarlo después.</p>
       <div class="modal-actions">
         <button class="btn-cancelar" id="modalBajaCancelar">Cancelar</button>
         <button class="btn-baja" id="modalBajaConfirmar">Dar de baja</button>
@@ -210,8 +211,8 @@
   <!-- MODAL ELIMINAR -->
   <div class="modal-overlay" id="modalEliminar" style="display:none">
     <div class="modal-box">
-      <h3 class="modal-title">¿Eliminar estudiante permanentemente?</h3>
-      <p class="modal-desc">Esta acción no se puede deshacer. Se eliminarán también sus horarios asignados.</p>
+      <h3 class="modal-title">¿Eliminar estudiante?</h3>
+      <p class="modal-desc">Esta acción no se puede deshacer. Se eliminarán también sus horarios y pagos.</p>
       <div class="modal-actions">
         <button class="btn-cancelar" id="modalEliminarCancelar">Cancelar</button>
         <button class="btn-eliminar-confirm" id="modalEliminarConfirmar">Eliminar</button>

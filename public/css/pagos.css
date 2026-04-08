@@ -72,6 +72,11 @@
 .btn-accion-editar:hover { background: rgba(255,255,255,0.22); }
 .btn-accion-recibo { background: rgba(37,99,235,0.25); color: #93c5fd; }
 .btn-accion-recibo:hover { background: rgba(37,99,235,0.4); }
+.btn-accion-eliminar { background: rgba(220,38,38,0.18); color: #fca5a5; padding: 0.3rem 0.5rem; }
+.btn-accion-eliminar:hover { background: rgba(220,38,38,0.35); }
+.btn-eliminar-confirm { display: flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1.4rem; background: rgba(220,38,38,0.7); border: none; border-radius: 999px; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); }
+.btn-eliminar-confirm:hover:not(:disabled) { background: rgba(220,38,38,0.9); }
+.btn-eliminar-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Modales */
 .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 1rem; }

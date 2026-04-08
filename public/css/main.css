@@ -49,11 +49,17 @@ CEA Sistema de Gestión
     padding: 0;
 }
 
-html, body {
+html {
+    height: 100%;
+    overflow: hidden;   /* solo bloquea html para que el fondo fijo no haga scroll */
+}
+
+body {
     height: 100%;
     font-family: var(--font-main);
     color: var(--text-white);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 button {
