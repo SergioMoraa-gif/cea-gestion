@@ -62,10 +62,12 @@
         <h1 class="topbar-title">Pagos</h1>
         <span class="topbar-sub">Gestión de cobros</span>
       </div>
-      <button class="btn-cargo-manual" id="btnCargoManual">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Generar cargos del mes
-      </button>
+      <div class="topbar-actions">
+        <a href="dashboard.html" class="btn-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+      </div>
     </header>
 
     <!-- FILTROS -->
@@ -122,8 +124,8 @@
         <label class="form-label">Estado</label>
         <div class="estado-btns">
           <button class="btn-estado" data-val="pagado"><span class="dot verde"></span>Pagado</button>
-          <button class="btn-estado" data-val="en_transito"><span class="dot azul"></span>En tránsito</button>
-          <button class="btn-estado" data-val="pendiente"><span class="dot amarillo"></span>Pendiente</button>
+          <button class="btn-estado" data-val="en_transito"><span class="dot amarillo"></span>En tránsito</button>
+          <button class="btn-estado" data-val="pendiente"><span class="dot rojo"></span>Pendiente</button>
         </div>
       </div>
 
@@ -158,31 +160,6 @@
         <button class="btn-cancelar" id="modalPagoCancelar">Cancelar</button>
         <button class="btn-guardar" id="modalPagoGuardar">
           <span class="btn-text">Guardar pago</span>
-          <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL GENERAR CARGOS -->
-  <div class="modal-overlay" id="modalCargo" style="display:none">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h3 class="modal-title">Generar cargos mensuales</h3>
-        <button class="btn-cerrar-modal" id="modalCargoCerrar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <p class="modal-desc">Genera cargos en <strong>Pendiente</strong> para todos los alumnos activos en el mes seleccionado. No duplica si ya existe un cargo para ese mes.</p>
-      <div class="form-group">
-        <label class="form-label">Mes a generar</label>
-        <input type="month" id="cargoMes" class="form-input"/>
-      </div>
-      <div id="cargoError" class="form-error" style="display:none"></div>
-      <div class="modal-actions">
-        <button class="btn-cancelar" id="modalCargoCancelar">Cancelar</button>
-        <button class="btn-guardar" id="modalCargoConfirmar">
-          <span class="btn-text">Generar cargos</span>
           <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
         </button>
       </div>

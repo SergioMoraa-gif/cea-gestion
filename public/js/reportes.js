@@ -192,6 +192,9 @@ async function cargarReporte() {
                        : p.metodo === 'efectivo'      ? 'Efectivo'
                        : p.metodo || '—'
 
+      const esInscripcion = p.tipo === 'inscripcion'
+      const esAjuste      = p.tipo === 'ajuste'
+
       const tr = document.createElement('tr')
       tr.innerHTML = `
         <td class="col-num">${i + 1}</td>
@@ -199,10 +202,12 @@ async function cargarReporte() {
           <a class="link-perfil" href="perfil-estudiante.html?id=${p.id_estudiante}">
             <strong>${est ? est.nombre : '—'}</strong>
           </a>
+          ${esInscripcion ? '<br><span style="font-size:.7rem;opacity:.6;font-style:italic">Inscripción</span>' : ''}
+          ${esAjuste      ? '<br><span style="font-size:.7rem;opacity:.6;font-style:italic">Ajuste</span>'      : ''}
         </td>
         <td class="col-folio">${est ? (est.folio || '—') : '—'}</td>
-        <td class="col-maestros">${maestros.length > 0 ? maestros.join(', ') : '—'}</td>
-        <td class="col-clases">${clasesLabel}</td>
+        <td class="col-maestros">${(esInscripcion || esAjuste) ? '—' : (maestros.length > 0 ? maestros.join(', ') : '—')}</td>
+        <td class="col-clases">${(esInscripcion || esAjuste)   ? '—' : clasesLabel}</td>
         <td><strong>$${Number(p.monto || 0).toLocaleString('es-MX')}</strong></td>
         <td>${metodLabel}</td>
         <td class="col-fecha">${fechaPago}</td>

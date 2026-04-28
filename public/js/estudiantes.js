@@ -101,14 +101,13 @@ function irCalendario(estudianteId) {
 // --- Formulario nuevo estudiante ---
 document.getElementById('btnNuevo').addEventListener('click', () => {
   estudianteNuevoId = null
-  document.getElementById('inputNombre').value = ''
-  document.getElementById('inputFolio').value  = ''
-  document.getElementById('inputTelefono').value = ''
-  document.getElementById('inputPrecio').value = ''
-  document.getElementById('formError').style.display = 'none'
+  document.getElementById('inputNombre').value    = ''
+  document.getElementById('inputFolio').value     = ''
+  document.getElementById('inputTelefono').value  = ''
+  document.getElementById('formError').style.display      = 'none'
   document.getElementById('seccionMaestros').style.display = 'none'
-  document.getElementById('btnGuardar').style.display = 'inline-flex'
-  document.getElementById('formCard').style.display = 'block'
+  document.getElementById('btnGuardar').style.display      = 'inline-flex'
+  document.getElementById('formCard').style.display        = 'block'
 })
 
 document.getElementById('btnCerrarForm').addEventListener('click', cerrarFormulario)
@@ -128,6 +127,17 @@ document.getElementById('btnGuardar').addEventListener('click', async () => {
   const errEl    = document.getElementById('formError')
 
   if (!nombre) { errEl.textContent = 'El nombre es requerido.'; errEl.style.display = 'block'; return }
+  if (folio && !/^[0-9]+[A-Z]?$/.test(folio)) {
+    errEl.textContent = 'El folio debe ser un número, con una letra mayúscula opcional al final (Ej. 001 o 001A).'
+    errEl.style.display = 'block'; return
+  }
+  if (telefono) {
+    const soloDigitos = telefono.replace(/\D/g, '')
+    if (soloDigitos.length !== 10) {
+      errEl.textContent = 'El teléfono debe tener exactamente 10 dígitos.'
+      errEl.style.display = 'block'; return
+    }
+  }
 
   const btn = document.getElementById('btnGuardar')
   btn.disabled = true
@@ -174,51 +184,6 @@ function mostrarBotonesMaestros() {
   })
 }
 
-// Paso 2: Finalizar inscripción guardando precio
-document.getElementById('btnFinalizarInscripcion').addEventListener('click', async () => {
-  const precio = parseFloat(document.getElementById('inputPrecio').value) || 0
-  const errEl  = document.getElementById('formError')
-
-  if (!estudianteNuevoId) return
-
-  const btn = document.getElementById('btnFinalizarInscripcion')
-  btn.disabled = true
-  btn.querySelector('.btn-text').style.display   = 'none'
-  btn.querySelector('.btn-loader').style.display = 'flex'
-
-  try {
-    // Obtener datos actuales del alumno para no perderlos
-    const resEst  = await fetch(`/api/estudiantes/${estudianteNuevoId}`, { headers })
-    const dataEst = await resEst.json()
-    const est     = dataEst.estudiante
-
-    await fetch(`/api/estudiantes/${estudianteNuevoId}`, {
-      method: 'PUT', headers,
-      body: JSON.stringify({
-        nombre:         est.nombre,
-        folio:          est.folio,
-        telefono:       est.telefono,
-        precio_mensual: precio
-      })
-    })
-
-    // Generar primer cargo
-    const hoy = new Date()
-    const mes = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-01`
-    await fetch('/api/pagos', {
-      method: 'POST', headers,
-      body: JSON.stringify({ id_estudiante: estudianteNuevoId, mes, monto: precio })
-    })
-
-    cerrarFormulario()
-  } catch (err) {
-    errEl.textContent = 'Error al guardar.'; errEl.style.display = 'block'
-  } finally {
-    btn.disabled = false
-    btn.querySelector('.btn-text').style.display   = 'inline'
-    btn.querySelector('.btn-loader').style.display = 'none'
-  }
-})
 
 // --- Editar ---
 function abrirEditar(id) {
@@ -244,6 +209,17 @@ document.getElementById('modalEditarGuardar').addEventListener('click', async ()
   const errEl    = document.getElementById('editError')
 
   if (!nombre) { errEl.textContent = 'El nombre es requerido.'; errEl.style.display = 'block'; return }
+  if (folio && !/^[0-9]+[A-Z]?$/.test(folio)) {
+    errEl.textContent = 'El folio debe ser un número con una letra mayúscula opcional al final (Ej. 001 o 001A).'
+    errEl.style.display = 'block'; return
+  }
+  if (telefono) {
+    const soloDigitos = telefono.replace(/\D/g, '')
+    if (soloDigitos.length !== 10) {
+      errEl.textContent = 'El teléfono debe tener exactamente 10 dígitos.'
+      errEl.style.display = 'block'; return
+    }
+  }
 
   const btn = document.getElementById('modalEditarGuardar')
   btn.disabled = true
@@ -310,17 +286,28 @@ window.abrirEliminar = abrirEliminar
 window.reactivar     = reactivar
 window.irCalendario  = irCalendario
 
-// Si regresa del calendario con ?regreso=id, mostrar sección de precio
+// Reabre el formulario de inscripción para un alumno ya creado (viene del botón Cancelar del calendario)
+function reabrirInscripcion(id) {
+  const est = estudiantesData.find(e => e.id_estudiante === id)
+  if (!est) return
+
+  estudianteNuevoId = id
+  document.getElementById('inputNombre').value   = est.nombre    || ''
+  document.getElementById('inputFolio').value    = est.folio     || ''
+  document.getElementById('inputTelefono').value = est.telefono  || ''
+  document.getElementById('formError').style.display       = 'none'
+  document.getElementById('btnGuardar').style.display      = 'none'
+  document.getElementById('formCard').style.display        = 'block'
+  mostrarBotonesMaestros()
+  document.getElementById('seccionMaestros').style.display = 'block'
+}
+
 const urlParams = new URLSearchParams(window.location.search)
-const regresoId = urlParams.get('regreso')
-if (regresoId) {
-  estudianteNuevoId = parseInt(regresoId)
-  cargarDatos().then(() => {
-    document.getElementById('btnGuardar').style.display = 'none'
-    mostrarBotonesMaestros()
-    document.getElementById('seccionMaestros').style.display = 'block'
-    document.getElementById('formCard').style.display = 'block'
-  })
+if (urlParams.get('accion') === 'nuevo') {
+  cargarDatos().then(() => document.getElementById('btnNuevo').click())
+} else if (urlParams.get('asignar')) {
+  const idAsignar = parseInt(urlParams.get('asignar'))
+  cargarDatos().then(() => reabrirInscripcion(idAsignar))
 } else {
   cargarDatos()
 }

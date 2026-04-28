@@ -71,7 +71,10 @@ async function cargarPagos() {
     let lista = pagosData
     if (busqueda) lista = lista.filter(p => {
       const est = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
-      return est && est.nombre.toLowerCase().includes(busqueda)
+      return est && (
+        est.nombre.toLowerCase().includes(busqueda) ||
+        (est.folio || '').toLowerCase().includes(busqueda)
+      )
     })
 
     loadingMsg.style.display = 'none'
@@ -81,7 +84,10 @@ async function cargarPagos() {
     lista.forEach(p => {
       const est      = estudiantesData.find(e => e.id_estudiante === p.id_estudiante)
       const fechaMes = p.mes ? new Date(p.mes + 'T12:00:00') : null
-      const mesLabel = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
+      const mesBase  = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
+      const mesLabel = p.tipo === 'inscripcion' ? 'Inscripción'
+                     : p.tipo === 'ajuste'      ? `Ajuste · ${mesBase}`
+                     : mesBase
       const metodLabel = p.metodo === 'transferencia' ? 'Transferencia' : p.metodo === 'efectivo' ? 'Efectivo' : '—'
 
       const tr = document.createElement('tr')
@@ -137,7 +143,7 @@ function abrirModalPago(id) {
 
   const est      = estudiantesData.find(e => e.id_estudiante === pago.id_estudiante)
   const fechaMes = pago.mes ? new Date(pago.mes + 'T12:00:00') : null
-  const mesLabel = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
+  const mesLabel = pago.tipo === 'inscripcion' ? 'Inscripción' : (fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—')
 
   document.getElementById('modalPagoTitulo').textContent = pago.estado === 'pendiente' ? 'Registrar pago' : 'Editar pago'
   document.getElementById('modalPagoSub').textContent    = `${est ? est.nombre : '—'} · ${mesLabel}`
@@ -254,7 +260,7 @@ function generarRecibo(pagoId) {
 
   const est      = estudiantesData.find(e => e.id_estudiante === pago.id_estudiante)
   const fechaMes = pago.mes ? new Date(pago.mes + 'T12:00:00') : null
-  const mesLabel = fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—'
+  const mesLabel = pago.tipo === 'inscripcion' ? 'Inscripción' : (fechaMes ? `${MESES[fechaMes.getMonth()]} ${fechaMes.getFullYear()}` : '—')
   const fechaPago = pago.fecha_pago ? new Date(pago.fecha_pago).toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' }) : '—'
   const folio     = String(pagoId).padStart(6, '0')
 
@@ -288,47 +294,6 @@ function generarRecibo(pagoId) {
 window.abrirModalPago   = abrirModalPago
 window.generarRecibo    = generarRecibo
 window.confirmarEliminar = confirmarEliminar
-
-// --- Modal generar cargos ---
-document.getElementById('btnCargoManual').addEventListener('click', () => {
-  const hoy = new Date()
-  document.getElementById('cargoMes').value = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`
-  document.getElementById('cargoError').style.display = 'none'
-  document.getElementById('modalCargo').style.display = 'flex'
-})
-
-document.getElementById('modalCargoCerrar').addEventListener('click',   () => document.getElementById('modalCargo').style.display = 'none')
-document.getElementById('modalCargoCancelar').addEventListener('click', () => document.getElementById('modalCargo').style.display = 'none')
-
-document.getElementById('modalCargoConfirmar').addEventListener('click', async () => {
-  const mes   = document.getElementById('cargoMes').value
-  const errEl = document.getElementById('cargoError')
-  if (!mes) { errEl.textContent = 'Selecciona un mes.'; errEl.style.display = 'block'; return }
-
-  const btn = document.getElementById('modalCargoConfirmar')
-  btn.disabled = true
-  btn.querySelector('.btn-text').style.display   = 'none'
-  btn.querySelector('.btn-loader').style.display = 'flex'
-  errEl.style.display = 'none'
-
-  try {
-    const res  = await fetch('/api/pagos/generar', {
-      method: 'POST', headers,
-      body: JSON.stringify({ mes: mes + '-01' })
-    })
-    const data = await res.json()
-    if (!res.ok) { errEl.textContent = data.message || 'Error.'; errEl.style.display = 'block'; return }
-    document.getElementById('modalCargo').style.display = 'none'
-    await cargarPagos()
-    alert(`✅ Se generaron ${data.generados} cargos nuevos.`)
-  } catch (err) {
-    errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'
-  } finally {
-    btn.disabled = false
-    btn.querySelector('.btn-text').style.display   = 'inline'
-    btn.querySelector('.btn-loader').style.display = 'none'
-  }
-})
 
 // --- Filtros ---
 document.getElementById('filtroEstado').addEventListener('change',  cargarPagos)

@@ -7,21 +7,29 @@ const supabase = require('../config/db')
 
 // GET /api/pagos
 async function listar(req, res) {
-  const { mes, estado, id_estudiante } = req.query
+  const { mes, estado, id_estudiante, tipo } = req.query
   try {
     let query = supabase
       .from('Pagos')
       .select('*')
       .order('fecha_creacion', { ascending: false })
 
-    if (mes) {
-      // Calcular primer día del mes siguiente para evitar fechas inválidas (ej. 04-31)
+    if (tipo) {
+      query = query.eq('tipo', tipo)
+    } else if (mes) {
+      // Sin filtro de tipo: traer cargos mensuales del mes dado + inscripciones creadas ese mes
       const [anio, mesNum] = mes.split('-').map(Number)
       const siguiente = mesNum === 12
         ? `${anio + 1}-01-01`
         : `${anio}-${String(mesNum + 1).padStart(2,'0')}-01`
-      query = query.gte('mes', mes + '-01').lt('mes', siguiente)
+      const inicioISO = `${mes}-01T00:00:00`
+      const siguienteISO = `${siguiente}T00:00:00`
+      // Pagos mensuales + ajustes del periodo OR inscripciones creadas en ese periodo
+      query = query.or(
+        `and(tipo.eq.mensual,mes.gte.${mes}-01,mes.lt.${siguiente}),and(tipo.eq.ajuste,mes.gte.${mes}-01,mes.lt.${siguiente}),and(tipo.eq.inscripcion,fecha_creacion.gte.${inicioISO},fecha_creacion.lt.${siguienteISO})`
+      )
     }
+
     if (estado)        query = query.eq('estado', estado)
     if (id_estudiante) query = query.eq('id_estudiante', parseInt(id_estudiante))
 
@@ -32,7 +40,7 @@ async function listar(req, res) {
 }
 
 // GET /api/pagos/pendientes — count para dashboard
-async function contarPendientes(req, res) {
+async function contarPendientes(_req, res) {
   try {
     const { count, error } = await supabase
       .from('Pagos')
@@ -48,11 +56,15 @@ async function actualizar(req, res) {
   const { id } = req.params
   const { estado, monto, metodo, fecha_pago, notas } = req.body
   try {
-    const updates = { estado }
+    const updates = {}
+    if (estado     !== undefined) updates.estado     = estado
     if (monto      !== undefined) updates.monto      = monto
     if (metodo     !== undefined) updates.metodo     = metodo
     if (fecha_pago !== undefined) updates.fecha_pago = fecha_pago
     if (notas      !== undefined) updates.notas      = notas
+
+    if (Object.keys(updates).length === 0)
+      return res.status(400).json({ message: 'No hay campos para actualizar.' })
 
     const { data, error } = await supabase
       .from('Pagos')
@@ -90,7 +102,8 @@ async function generar(req, res) {
         id_estudiante: e.id_estudiante,
         mes,
         monto:  e.precio_mensual || 0,
-        estado: 'pendiente'
+        estado: 'pendiente',
+        tipo:   'mensual'
       }))
 
     if (nuevos.length > 0) {
@@ -104,20 +117,50 @@ async function generar(req, res) {
 
 // POST /api/pagos — Crear cargo individual
 async function crear(req, res) {
-  const { id_estudiante, mes, monto } = req.body
-  if (!id_estudiante || !mes) return res.status(400).json({ message: 'Faltan datos.' })
+  const { id_estudiante, mes, monto, es_inscripcion, tipo } = req.body
+  if (!id_estudiante) return res.status(400).json({ message: 'Faltan datos.' })
 
   try {
-    // Verificar que no exista ya
+    // Cargo de ajuste (proporcional por clase agregada/descontada)
+    if (tipo === 'ajuste') {
+      if (!mes || monto === undefined) return res.status(400).json({ message: 'Faltan datos para el ajuste.' })
+      const { data, error } = await supabase
+        .from('Pagos')
+        .insert([{ id_estudiante, mes, monto, estado: 'pendiente', tipo: 'ajuste' }])
+        .select().single()
+      if (error) return res.status(500).json({ message: error.message })
+      return res.status(201).json({ message: 'Ajuste creado.', pago: data })
+    }
+
+    if (!mes && !es_inscripcion) return res.status(400).json({ message: 'Faltan datos.' })
+
+    if (es_inscripcion) {
+      // Verificar que no exista ya una inscripción para este alumno
+      const { data: existe } = await supabase
+        .from('Pagos').select('id_pago')
+        .eq('id_estudiante', id_estudiante)
+        .eq('tipo', 'inscripcion')
+      if (existe && existe.length > 0)
+        return res.json({ message: 'La inscripción ya existe.', existe: true })
+
+      const { data, error } = await supabase
+        .from('Pagos')
+        .insert([{ id_estudiante, mes: null, monto: monto || 0, estado: 'pendiente', tipo: 'inscripcion' }])
+        .select().single()
+      if (error) return res.status(500).json({ message: error.message })
+      return res.status(201).json({ message: 'Cargo de inscripción creado.', pago: data })
+    }
+
+    // Cargo mensual — verificar que no exista ya
     const { data: existe } = await supabase
       .from('Pagos').select('id_pago')
-      .eq('id_estudiante', id_estudiante).eq('mes', mes)
+      .eq('id_estudiante', id_estudiante).eq('mes', mes).eq('tipo', 'mensual')
     if (existe && existe.length > 0)
       return res.json({ message: 'El cargo ya existe.', existe: true })
 
     const { data, error } = await supabase
       .from('Pagos')
-      .insert([{ id_estudiante, mes, monto: monto || 0, estado: 'pendiente' }])
+      .insert([{ id_estudiante, mes, monto: monto || 0, estado: 'pendiente', tipo: 'mensual' }])
       .select().single()
     if (error) return res.status(500).json({ message: error.message })
     res.status(201).json({ message: 'Cargo creado.', pago: data })

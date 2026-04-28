@@ -7,9 +7,10 @@ if (!token) window.location.href = 'index.html'
 
 const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
 
-const params      = new URLSearchParams(window.location.search)
+const params       = new URLSearchParams(window.location.search)
 const estudianteId = parseInt(params.get('id'))
 if (!estudianteId) window.location.href = 'estudiantes.html'
+const nuevaClase   = params.get('nuevaClase') === 'true'
 
 const DIAS       = ['lunes','martes','miercoles','jueves','viernes','sabado']
 const DIAS_LABEL = ['Lunes','Martes','Miérc.','Jueves','Viernes','Sábado']
@@ -27,12 +28,16 @@ let horariosData   = []
 let maestrosData   = []
 let pagosData      = []
 
-// Bloque actualmente seleccionado en el modal
-let bloqueActual   = null
+// Modal de edición de bloque
+let bloqueActual      = null
+let todosBloquesGrupo = []
+let tipoEditando      = 'individual'
+let duracionEditando  = 30
+let albercaEditando   = 1
 
-// Estado del modal de edición de bloque
-let tipoSeleccionado     = 'individual'
-let duracionSeleccionada = 30
+// Modal de ajuste del mes
+let modoAjuste  = null   // 'sumar' | 'restar'
+let pagoAjuste  = null   // pago pendiente del mes actual (para restar)
 
 // ─── Sidebar ───────────────────────────────────────────────
 const sidebar         = document.getElementById('sidebar')
@@ -75,6 +80,10 @@ async function iniciar() {
     renderInfo()
     renderCalendario()
     renderPagos()
+
+    if (nuevaClase) {
+      setTimeout(() => abrirModalPrecioMensual(), 300)
+    }
   } catch (err) {
     document.getElementById('loadingCal').textContent = 'Error al cargar los datos.'
   }
@@ -123,6 +132,17 @@ document.getElementById('btnGuardarInfo').addEventListener('click', async () => 
   const errEl    = document.getElementById('editError')
 
   if (!nombre) { errEl.textContent = 'El nombre es requerido.'; errEl.style.display = 'block'; return }
+  if (folio && !/^[0-9]+[A-Z]?$/.test(folio)) {
+    errEl.textContent = 'El folio debe ser un número con una letra mayúscula opcional al final (Ej. 001 o 001A).'
+    errEl.style.display = 'block'; return
+  }
+  if (telefono) {
+    const soloDigitos = telefono.replace(/\D/g, '')
+    if (soloDigitos.length !== 10) {
+      errEl.textContent = 'El teléfono debe tener exactamente 10 dígitos.'
+      errEl.style.display = 'block'; return
+    }
+  }
   errEl.style.display = 'none'
 
   const btn = document.getElementById('btnGuardarInfo')
@@ -182,13 +202,15 @@ function renderCalendario() {
     mapa[key].push(h)
   })
 
-  // Celdas a omitir por rowspan (bloques de 60 min)
+  // Celdas a omitir: solo los slots que caen DENTRO del bloque (no el que sigue después)
   const saltarCelda = new Set()
   horariosData.forEach(h => {
-    if (h.duracion === 60 || h.tipo === 'grupal') {
+    const dur = parseInt(h.duracion) || 30
+    if (dur > 30) {
       const [hh, mm] = h.hora_inicio.split(':').map(Number)
-      for (const delta of [30, 60]) {
-        const tot = hh * 60 + mm + delta
+      const startMin = hh * 60 + mm
+      for (let delta = 30; delta < dur; delta += 30) {
+        const tot = startMin + delta
         const key = `${h.dia}_${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}:00`
         saltarCelda.add(key)
       }
@@ -210,16 +232,18 @@ function renderCalendario() {
       const bloqs  = mapa[keyFull] || []
 
       if (bloqs.length > 0) {
-        const esGrupal = bloqs.some(b => b.tipo === 'grupal' || b.duracion === 60)
-        if (esGrupal) td.rowSpan = 3
+        const maxDur     = Math.max(...bloqs.map(b => parseInt(b.duracion) || 30))
+        const spanNeeded = Math.ceil(maxDur / 30)
+        if (spanNeeded > 1) td.rowSpan = spanNeeded
 
         bloqs.forEach(b => {
           const maestro = maestrosData.find(m => m.id_maestro === (b.maestro_id || b.id_maestro))
           const div     = document.createElement('div')
-          div.className = `bloque-clase ${colorMap[b.maestro_id || b.id_maestro] || 'color-0'}${esGrupal ? ' bloque-grande' : ''}`
+          div.className = `bloque-clase ${colorMap[b.maestro_id || b.id_maestro] || 'color-0'}${maxDur > 30 ? ' bloque-grande' : ''}`
+          const tipoLabel = b.tipo === 'grupal' ? 'Grupal' : b.tipo === 'matros' ? 'Matros' : 'Individual'
           div.innerHTML = `
             <div class="bc-maestro">${maestro ? maestro.nombre : '—'}</div>
-            <div class="bc-tipo">${b.tipo === 'grupal' ? 'Grupal' : 'Individual'} · ${b.duracion || 30} min</div>`
+            <div class="bc-tipo">${tipoLabel} · ${b.duracion || 30} min</div>`
           div.addEventListener('click', () => abrirModalBloque(b, dia, hora, maestro))
           td.appendChild(div)
         })
@@ -238,46 +262,109 @@ function renderCalendario() {
 }
 
 // ─── Modal: ver / editar bloque ────────────────────────────
-function abrirModalBloque(horario, dia, hora, maestro) {
+const DIAS_OPT = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado' }
+
+function poblarDiasBloque(diasValidos, diaActual) {
+  const sel = document.getElementById('modalBloqueDia')
+  sel.innerHTML = ''
+  diasValidos.forEach(d => {
+    const opt = document.createElement('option')
+    opt.value = d; opt.textContent = DIAS_OPT[d] || d
+    if (d === diaActual) opt.selected = true
+    sel.appendChild(opt)
+  })
+}
+
+function poblarHorasBloque(horaActual) {
+  const sel = document.getElementById('modalBloqueHora')
+  sel.innerHTML = ''
+  BLOQUES.forEach(h => {
+    const opt = document.createElement('option')
+    opt.value = h; opt.textContent = h
+    if (horaActual && horaActual.startsWith(h)) opt.selected = true
+    sel.appendChild(opt)
+  })
+}
+
+function actualizarBotonesEdTipo(tipo) {
+  tipoEditando = tipo
+  document.querySelectorAll('.btn-tipo-ed').forEach(b => b.classList.toggle('activo', b.dataset.val === tipo))
+  const btn30 = document.querySelector('.btn-dur-ed[data-val="30"]')
+  if (tipo === 'grupal') {
+    btn30.classList.add('deshabilitado'); btn30.disabled = true
+    actualizarBotonesEdDuracion(60)
+  } else {
+    btn30.classList.remove('deshabilitado'); btn30.disabled = false
+  }
+}
+
+function actualizarBotonesEdDuracion(dur) {
+  duracionEditando = parseInt(dur)
+  document.querySelectorAll('.btn-dur-ed').forEach(b =>
+    b.classList.toggle('activo', parseInt(b.dataset.val) === parseInt(dur)))
+}
+
+function actualizarBotonesEdAlberca(n) {
+  albercaEditando = parseInt(n)
+  document.querySelectorAll('.btn-alb-ed').forEach(b =>
+    b.classList.toggle('activo', parseInt(b.dataset.val) === parseInt(n)))
+}
+
+document.querySelectorAll('.btn-tipo-ed').forEach(b =>
+  b.addEventListener('click', () => actualizarBotonesEdTipo(b.dataset.val))
+)
+document.querySelectorAll('.btn-dur-ed').forEach(b =>
+  b.addEventListener('click', () => { if (!b.disabled) actualizarBotonesEdDuracion(b.dataset.val) })
+)
+document.querySelectorAll('.btn-alb-ed').forEach(b =>
+  b.addEventListener('click', () => actualizarBotonesEdAlberca(b.dataset.val))
+)
+
+async function abrirModalBloque(horario, dia, hora, maestro) {
   bloqueActual = horario
+  const esGrupal = horario.tipo === 'grupal' || horario.tipo === 'matros'
 
-  const diaLabel = DIAS_LABEL[DIAS.indexOf(dia)]
-  document.getElementById('modalBloqueTitle').textContent =
-    `${diaLabel} · ${hora}`
-  document.getElementById('modalBloqueInfo').innerHTML =
-    `Maestro: <strong>${maestro ? maestro.nombre : '—'}</strong>`
+  document.getElementById('modalBloqueInfo').textContent =
+    `${DIAS_LABEL[DIAS.indexOf(dia)]} · ${hora}`
+  document.getElementById('modalBloqueMaestroNombre').textContent =
+    maestro ? `Maestro: ${maestro.nombre}` : '—'
 
-  tipoSeleccionado     = horario.tipo     || 'individual'
-  duracionSeleccionada = horario.duracion || 30
-  actualizarBotonesTipo(tipoSeleccionado)
-  actualizarBotonesDuracion(duracionSeleccionada)
+  const diasMaestro = maestro ? (maestro.dias_trabajo || DIAS) : DIAS
+  poblarDiasBloque(diasMaestro, horario.dia || dia)
+  poblarHorasBloque(horario.hora_inicio)
+  actualizarBotonesEdTipo(horario.tipo || 'individual')
+  actualizarBotonesEdDuracion(horario.duracion || 30)
+  actualizarBotonesEdAlberca(horario.alberca || 1)
+
+  if (esGrupal && maestro) {
+    try {
+      const res  = await fetch(`/api/horarios/maestro/${maestro.id_maestro}`, { headers })
+      const data = await res.json()
+      todosBloquesGrupo = (data.horarios || []).filter(h =>
+        h.dia === horario.dia &&
+        h.hora_inicio === horario.hora_inicio &&
+        h.tipo === horario.tipo
+      )
+    } catch {
+      todosBloquesGrupo = [horario]
+    }
+    document.getElementById('modalBloqueCount').textContent =
+      `${todosBloquesGrupo.length} alumno${todosBloquesGrupo.length !== 1 ? 's' : ''} en el grupo`
+    const lista = document.getElementById('modalBloqueListaAlumnos')
+    lista.innerHTML = ''
+    document.getElementById('modalBloqueSecAlumnos').style.display    = 'block'
+    document.getElementById('modalBloqueSecIndividual').style.display = 'none'
+  } else {
+    todosBloquesGrupo = [horario]
+    document.getElementById('modalBloqueSecAlumnos').style.display    = 'none'
+    document.getElementById('modalBloqueSecIndividual').style.display = 'block'
+    document.getElementById('modalBloqueAlumnoNombre').textContent    = estudianteData ? estudianteData.nombre : '—'
+  }
 
   document.getElementById('modalBloque').style.display = 'flex'
 }
 
-function actualizarBotonesTipo(tipo) {
-  tipoSeleccionado = tipo
-  document.querySelectorAll('.btn-tipo').forEach(b =>
-    b.classList.toggle('activo', b.dataset.val === tipo))
-}
-
-function actualizarBotonesDuracion(dur) {
-  duracionSeleccionada = parseInt(dur)
-  document.querySelectorAll('.btn-duracion').forEach(b =>
-    b.classList.toggle('activo', parseInt(b.dataset.val) === parseInt(dur)))
-}
-
-document.querySelectorAll('.btn-tipo').forEach(b =>
-  b.addEventListener('click', () => actualizarBotonesTipo(b.dataset.val))
-)
-document.querySelectorAll('.btn-duracion').forEach(b =>
-  b.addEventListener('click', () => actualizarBotonesDuracion(b.dataset.val))
-)
-
 document.getElementById('modalBloqueCerrar').addEventListener('click', () => {
-  document.getElementById('modalBloque').style.display = 'none'
-})
-document.getElementById('modalBloqueCancelar').addEventListener('click', () => {
   document.getElementById('modalBloque').style.display = 'none'
 })
 
@@ -289,23 +376,32 @@ document.getElementById('btnGuardarBloque').addEventListener('click', async () =
   btn.querySelector('.btn-text').style.display   = 'none'
   btn.querySelector('.btn-loader').style.display = 'flex'
 
-  const durMin  = duracionSeleccionada
-  const [hh, mm] = (bloqueActual.hora_inicio || '00:00:00').split(':').map(Number)
-  const tot      = hh * 60 + mm + durMin
-  const horaFin  = `${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}:00`
+  const nuevoDia   = document.getElementById('modalBloqueDia').value
+  const nuevaHora  = document.getElementById('modalBloqueHora').value
+  const [hh, mm]   = nuevaHora.split(':').map(Number)
+  const tot        = hh * 60 + mm + duracionEditando
+  const horaFin    = `${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}:00`
+  const horaInicio = nuevaHora + ':00'
 
   try {
-    const res = await fetch(`/api/horarios/${bloqueActual.id || bloqueActual.id_horario}`, {
-      method: 'PATCH', headers,
-      body: JSON.stringify({
-        tipo:      tipoSeleccionado,
-        duracion:  duracionSeleccionada,
-        hora_fin:  horaFin
+    const ids = todosBloquesGrupo.map(b => b.id_horario)
+    for (const id of ids) {
+      const res = await fetch(`/api/horarios/${id}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({
+          dia:         nuevoDia,
+          hora_inicio: horaInicio,
+          hora_fin:    horaFin,
+          tipo:        tipoEditando,
+          duracion:    duracionEditando,
+          alberca:     albercaEditando
+        })
       })
-    })
-    const data = await res.json()
-    if (!res.ok) { alert(data.message || 'Error al guardar.'); return }
-
+      if (!res.ok) {
+        const d = await res.json()
+        alert(d.message || 'Error al guardar.'); return
+      }
+    }
     document.getElementById('modalBloque').style.display = 'none'
     await recargarHorarios()
   } catch (err) {
@@ -317,33 +413,248 @@ document.getElementById('btnGuardarBloque').addEventListener('click', async () =
   }
 })
 
-// Eliminar bloque — abre confirmación
-document.getElementById('btnEliminarBloque').addEventListener('click', () => {
-  document.getElementById('modalBloque').style.display = 'none'
-  document.getElementById('modalConfEliminar').style.display = 'flex'
-})
-
-document.getElementById('modalConfEliminarCancelar').addEventListener('click', () => {
-  document.getElementById('modalConfEliminar').style.display = 'none'
-  document.getElementById('modalBloque').style.display = 'flex'
-})
-
-document.getElementById('modalConfEliminarConfirmar').addEventListener('click', async () => {
+// Eliminar bloque
+document.getElementById('btnEliminarBloque').addEventListener('click', async () => {
   if (!bloqueActual) return
-  const btn = document.getElementById('modalConfEliminarConfirmar')
+  const esGrupal = bloqueActual.tipo === 'grupal' || bloqueActual.tipo === 'matros'
+  const msg = esGrupal
+    ? '¿Quitar tu lugar en esta clase grupal? El resto del grupo no se ve afectado.'
+    : '¿Eliminar esta clase? Esta acción no se puede deshacer.'
+  if (!confirm(msg)) return
+
+  try {
+    const res  = await fetch(`/api/horarios/${bloqueActual.id || bloqueActual.id_horario}`, {
+      method: 'DELETE', headers
+    })
+    const data = await res.json()
+    if (!res.ok) { alert(data.message || 'Error al eliminar.'); return }
+    document.getElementById('modalBloque').style.display = 'none'
+    await recargarHorarios()
+
+    // Preguntar si desea descontar del mes actual
+    const mes = mesActualStr()
+    const pagoPendiente = pagosData.find(p =>
+      p.tipo === 'mensual' &&
+      p.estado === 'pendiente' &&
+      p.mes && p.mes.startsWith(mes)
+    )
+    if (pagoPendiente) abrirModalAjuste('restar', pagoPendiente)
+  } catch (err) {
+    alert('Error de conexión.')
+  }
+})
+
+// ─── Modal ajuste del mes ───────────────────────────────────
+function mesActualStr() {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2,'0')}`
+}
+
+function abrirModalAjuste(modo, pagoExistente = null) {
+  modoAjuste = modo
+  pagoAjuste = pagoExistente
+  document.getElementById('modalAjusteMonto').value = ''
+
+  const montoActual = pagoExistente ? `$${Number(pagoExistente.monto).toLocaleString('es-MX')}` : '—'
+  document.getElementById('modalAjusteTitulo').textContent = 'Descuento del mes actual'
+  document.getElementById('modalAjusteDesc').textContent =
+    `Se eliminó una clase. El cargo pendiente de este mes es ${montoActual}. ¿Deseas descontar algo?`
+  document.getElementById('modalAjusteLabel').textContent =
+    'Monto a descontar (dejar vacío para no modificar)'
+
+  document.getElementById('modalAjuste').style.display = 'flex'
+}
+
+// ─── Modal precio mensual (post-asignación) ─────────────────
+function abrirModalPrecioMensual() {
+  const precioActual = estudianteData.precio_mensual || 0
+  document.getElementById('precioMensualError').style.display = 'none'
+  document.getElementById('precioMensualInput').value = ''
+
+  if (precioActual > 0) {
+    document.getElementById('precioActualDisplay').textContent = Number(precioActual).toLocaleString('es-MX')
+    document.getElementById('precioState1').style.display = 'block'
+    document.getElementById('precioState2').style.display = 'none'
+    document.getElementById('btnPrecioVolver').style.display = 'inline-block'
+  } else {
+    document.getElementById('precioState1').style.display = 'none'
+    document.getElementById('precioState2').style.display = 'block'
+    document.getElementById('btnPrecioVolver').style.display = 'none'
+  }
+  document.getElementById('modalPrecioMensual').style.display = 'flex'
+}
+
+document.getElementById('btnPrecioNoChange').addEventListener('click', () => {
+  document.getElementById('modalPrecioMensual').style.display = 'none'
+  abrirModalCargoExtra()
+})
+
+document.getElementById('btnPrecioSiChange').addEventListener('click', () => {
+  document.getElementById('precioMensualInput').value = estudianteData.precio_mensual || ''
+  document.getElementById('precioState1').style.display = 'none'
+  document.getElementById('precioState2').style.display = 'block'
+})
+
+document.getElementById('btnPrecioVolver').addEventListener('click', () => {
+  document.getElementById('precioState2').style.display = 'none'
+  document.getElementById('precioState1').style.display = 'block'
+})
+
+document.getElementById('btnPrecioGuardar').addEventListener('click', async () => {
+  const precio = parseFloat(document.getElementById('precioMensualInput').value) || 0
+  const errEl  = document.getElementById('precioMensualError')
+
+  if (precio <= 0) {
+    errEl.textContent = 'Ingresa un monto mayor a $0.'
+    errEl.style.display = 'block'; return
+  }
+  errEl.style.display = 'none'
+
+  const btn = document.getElementById('btnPrecioGuardar')
   btn.disabled = true
   btn.querySelector('.btn-text').style.display   = 'none'
   btn.querySelector('.btn-loader').style.display = 'flex'
 
   try {
-    const res = await fetch(`/api/horarios/${bloqueActual.id || bloqueActual.id_horario}`, {
-      method: 'DELETE', headers
+    const resEst = await fetch(`/api/estudiantes/${estudianteId}`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({
+        nombre:         estudianteData.nombre,
+        folio:          estudianteData.folio,
+        telefono:       estudianteData.telefono,
+        precio_mensual: precio
+      })
     })
-    const data = await res.json()
-    if (!res.ok) { alert(data.message || 'Error al eliminar.'); return }
+    const dataEst = await resEst.json()
+    if (!resEst.ok) { errEl.textContent = dataEst.message || 'Error al guardar.'; errEl.style.display = 'block'; return }
+    estudianteData = dataEst.estudiante
+    renderInfo()
 
-    document.getElementById('modalConfEliminar').style.display = 'none'
-    await recargarHorarios()
+    // Crear cargo mensual para el mes actual (si no existe ya)
+    const mesStr = mesActualStr()
+    await fetch('/api/pagos', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        id_estudiante: estudianteId,
+        mes:   mesStr + '-01',
+        monto: precio,
+        tipo:  'mensual'
+      })
+    })
+
+    // Refrescar pagos para que el historial refleje el nuevo cargo
+    const resPag = await fetch(`/api/pagos?id_estudiante=${estudianteId}`, { headers })
+    pagosData = (await resPag.json()).pagos || []
+    renderPagos()
+
+    document.getElementById('modalPrecioMensual').style.display = 'none'
+    abrirModalCargoExtra()
+  } catch (err) {
+    errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+})
+
+// ─── Modal cargo extra del mes ──────────────────────────────
+function abrirModalCargoExtra() {
+  document.getElementById('cargoExtraMonto').value = ''
+  document.querySelectorAll('.btn-monto-rapido').forEach(b => b.classList.remove('activo'))
+  const hoy = new Date()
+  document.getElementById('cargoExtraMesLabel').textContent =
+    hoy.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
+  document.getElementById('modalCargoExtra').style.display = 'flex'
+}
+
+document.querySelectorAll('.btn-monto-rapido').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn-monto-rapido').forEach(b => b.classList.remove('activo'))
+    btn.classList.add('activo')
+    document.getElementById('cargoExtraMonto').value = btn.dataset.val
+  })
+})
+
+document.getElementById('btnSinCargoExtra').addEventListener('click', () => {
+  document.getElementById('modalCargoExtra').style.display = 'none'
+})
+
+document.getElementById('btnRegistrarCargoExtra').addEventListener('click', async () => {
+  const monto = parseFloat(document.getElementById('cargoExtraMonto').value) || 0
+  if (monto <= 0) {
+    document.getElementById('modalCargoExtra').style.display = 'none'
+    return
+  }
+  const btn = document.getElementById('btnRegistrarCargoExtra')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
+  try {
+    const mes = mesActualStr()
+    const res = await fetch('/api/pagos', {
+      method: 'POST', headers,
+      body: JSON.stringify({ id_estudiante: estudianteId, mes: mes + '-01', monto, tipo: 'ajuste' })
+    })
+    if (!res.ok) { const d = await res.json(); alert(d.message || 'Error al registrar cargo.') }
+    document.getElementById('modalCargoExtra').style.display = 'none'
+    const res2 = await fetch(`/api/pagos?id_estudiante=${estudianteId}`, { headers })
+    pagosData = (await res2.json()).pagos || []
+    renderPagos()
+  } catch (err) {
+    alert('Error de conexión.')
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+})
+
+document.getElementById('modalAjusteCerrar').addEventListener('click', () => {
+  document.getElementById('modalAjuste').style.display = 'none'
+})
+document.getElementById('modalAjusteOmitir').addEventListener('click', () => {
+  document.getElementById('modalAjuste').style.display = 'none'
+})
+
+document.getElementById('modalAjusteConfirmar').addEventListener('click', async () => {
+  const montoStr = document.getElementById('modalAjusteMonto').value.trim()
+  if (!montoStr || isNaN(parseFloat(montoStr)) || parseFloat(montoStr) <= 0) {
+    document.getElementById('modalAjuste').style.display = 'none'
+    return
+  }
+  const monto = parseFloat(montoStr)
+
+  const btn = document.getElementById('modalAjusteConfirmar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
+  try {
+    if (modoAjuste === 'sumar') {
+      // Crear nuevo cargo tipo 'ajuste'
+      const mes = mesActualStr()
+      const res = await fetch('/api/pagos', {
+        method: 'POST', headers,
+        body: JSON.stringify({ id_estudiante: estudianteId, mes: mes + '-01', monto, tipo: 'ajuste' })
+      })
+      if (!res.ok) { const d = await res.json(); alert(d.message || 'Error al crear ajuste.') }
+    } else if (modoAjuste === 'restar' && pagoAjuste) {
+      // Reducir monto del pago pendiente actual
+      const nuevoMonto = Math.max(0, pagoAjuste.monto - monto)
+      const res = await fetch(`/api/pagos/${pagoAjuste.id_pago}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ monto: nuevoMonto })
+      })
+      if (!res.ok) { const d = await res.json(); alert(d.message || 'Error al actualizar pago.') }
+    }
+    document.getElementById('modalAjuste').style.display = 'none'
+    // Recargar pagos para reflejar el cambio
+    const res2 = await fetch(`/api/pagos?id_estudiante=${estudianteId}`, { headers })
+    const data2 = await res2.json()
+    pagosData = data2.pagos || []
+    renderPagos()
   } catch (err) {
     alert('Error de conexión.')
   } finally {
@@ -357,10 +668,14 @@ async function recargarHorarios() {
   try {
     document.getElementById('loadingCal').style.display       = 'block'
     document.getElementById('calendarioScroll').style.display = 'none'
-    const res    = await fetch(`/api/horarios/estudiante/${estudianteId}`, { headers })
-    const data   = await res.json()
-    horariosData = data.horarios || []
+    const [resHor, resPag] = await Promise.all([
+      fetch(`/api/horarios/estudiante/${estudianteId}`, { headers }),
+      fetch(`/api/pagos?id_estudiante=${estudianteId}`, { headers })
+    ])
+    horariosData = (await resHor.json()).horarios || []
+    pagosData    = (await resPag.json()).pagos    || []
     renderCalendario()
+    renderPagos()
   } catch (err) {
     document.getElementById('loadingCal').textContent = 'Error al recargar.'
   }
@@ -418,15 +733,18 @@ function renderPagos() {
   emptyEl.style.display = 'none'
   wrapEl.style.display  = 'block'
 
-  // Ordenar por mes descendente
-  const ordenados = [...pagosData].sort((a, b) =>
-    (b.mes || '').localeCompare(a.mes || ''))
+  // Ordenar: inscripciones (mes=null) primero, luego por mes descendente
+  const ordenados = [...pagosData].sort((a, b) => {
+    if (a.tipo === 'inscripcion' && b.tipo !== 'inscripcion') return -1
+    if (a.tipo !== 'inscripcion' && b.tipo === 'inscripcion') return 1
+    return (b.mes || '').localeCompare(a.mes || '')
+  })
 
   ordenados.forEach(p => {
     const tr = document.createElement('tr')
-    const mes = p.mes
-      ? new Date(p.mes + 'T12:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long' })
-      : '—'
+    const mes = p.tipo === 'inscripcion'
+      ? 'Inscripción'
+      : new Date(p.mes + 'T12:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long' })
     const fechaPago = p.fecha_pago
       ? new Date(p.fecha_pago).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
       : '—'

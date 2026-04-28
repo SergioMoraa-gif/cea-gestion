@@ -100,9 +100,17 @@ async function actualizar(req, res) {
 async function darBaja(req, res) {
   const { id } = req.params
   try {
+    // Eliminar todos los horarios del alumno.
+    // Si era el único en un grupo, el grupo desaparece.
+    // Si había más alumnos en el grupo, sus filas permanecen.
+    const { error: errH } = await supabase
+      .from('HorariosAlumnos').delete().eq('id_estudiante', id)
+    if (errH) return res.status(500).json({ message: errH.message })
+
     const { error } = await supabase
       .from('Estudiantes').update({ activo: false }).eq('id_estudiante', id)
     if (error) return res.status(500).json({ message: error.message })
+
     res.json({ message: 'Estudiante dado de baja.' })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }

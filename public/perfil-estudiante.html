@@ -194,10 +194,10 @@
   <!-- MODAL: Ver/editar bloque de clase -->
   <div class="modal-overlay" id="modalBloque" style="display:none">
     <div class="modal-box">
-      <div class="modal-header">
+      <div class="modal-bloque-header">
         <div>
-          <h3 class="modal-title" id="modalBloqueTitle">—</h3>
-          <p class="modal-bloque-info" id="modalBloqueInfo">—</p>
+          <div class="modal-bloque-hora" id="modalBloqueInfo">—</div>
+          <div class="modal-bloque-maestro" id="modalBloqueMaestroNombre">—</div>
         </div>
         <button class="btn-cerrar-form" id="modalBloqueCerrar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -207,38 +207,148 @@
       <div class="form-group">
         <label class="form-label">Tipo de clase</label>
         <div class="opciones-btns">
-          <button class="btn-tipo activo" data-val="individual">Individual</button>
-          <button class="btn-tipo" data-val="grupal">Grupal</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Duración</label>
-        <div class="opciones-btns">
-          <button class="btn-duracion activo" data-val="30">30 min</button>
-          <button class="btn-duracion" data-val="60">60 min</button>
+          <button class="btn-tipo-ed activo" data-val="individual">Individual</button>
+          <button class="btn-tipo-ed" data-val="grupal">Grupal</button>
+          <button class="btn-tipo-ed" data-val="matros">Matros</button>
         </div>
       </div>
 
-      <div class="modal-actions">
-        <button class="btn-eliminar-confirm" id="btnEliminarBloque">Eliminar clase</button>
-        <button class="btn-cancelar" id="modalBloqueCancelar">Cancelar</button>
+      <div class="form-group">
+        <label class="form-label">Duración</label>
+        <div class="opciones-btns">
+          <button class="btn-dur-ed activo" data-val="30">30 min</button>
+          <button class="btn-dur-ed" data-val="60">60 min</button>
+        </div>
+      </div>
+
+      <div class="form-row-doble">
+        <div class="form-group">
+          <label class="form-label">Día</label>
+          <select id="modalBloqueDia" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hora inicio</label>
+          <select id="modalBloqueHora" class="form-select"></select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Alberca</label>
+        <div class="opciones-btns">
+          <button class="btn-alb-ed activo" data-val="1">Alberca 1</button>
+          <button class="btn-alb-ed" data-val="2">Alberca 2</button>
+        </div>
+      </div>
+
+      <!-- Lista alumnos en grupo (grupal/matros) -->
+      <div id="modalBloqueSecAlumnos" style="display:none">
+        <div class="modal-bloque-count" id="modalBloqueCount">—</div>
+        <div class="modal-bloque-lista" id="modalBloqueListaAlumnos"></div>
+      </div>
+
+      <!-- Alumno individual -->
+      <div id="modalBloqueSecIndividual" style="display:none">
+        <div class="modal-bloque-count" id="modalBloqueAlumnoNombre">—</div>
+      </div>
+
+      <div class="modal-actions modal-actions-editar">
+        <button class="btn-eliminar-bloque" id="btnEliminarBloque">Eliminar</button>
         <button class="btn-guardar" id="btnGuardarBloque">
-          <span class="btn-text">Guardar</span>
+          <span class="btn-text">Guardar cambios</span>
           <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: Confirmar eliminar bloque -->
-  <div class="modal-overlay" id="modalConfEliminar" style="display:none">
+  <!-- MODAL: Ajuste del mes actual -->
+  <div class="modal-overlay" id="modalAjuste" style="display:none">
     <div class="modal-box">
-      <h3 class="modal-title">¿Eliminar esta clase?</h3>
-      <p class="modal-desc">Se quitará el bloque del horario. Esta acción no se puede deshacer.</p>
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalAjusteTitulo">Ajuste del mes</h3>
+        <button class="btn-cerrar-form" id="modalAjusteCerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="modal-desc" id="modalAjusteDesc">—</p>
+      <div class="form-group">
+        <label class="form-label" id="modalAjusteLabel">Monto del ajuste</label>
+        <input type="number" id="modalAjusteMonto" class="info-input" placeholder="Dejar vacío para omitir" min="0" step="0.01"/>
+      </div>
       <div class="modal-actions">
-        <button class="btn-cancelar" id="modalConfEliminarCancelar">Cancelar</button>
-        <button class="btn-eliminar-confirm" id="modalConfEliminarConfirmar">
-          <span class="btn-text">Eliminar</span>
+        <button class="btn-cancelar" id="modalAjusteOmitir">Omitir</button>
+        <button class="btn-guardar" id="modalAjusteConfirmar">
+          <span class="btn-text">Aplicar</span>
+          <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Precio mensual (después de asignar horario) -->
+  <div class="modal-overlay" id="modalPrecioMensual" style="display:none">
+    <div class="modal-box">
+
+      <!-- Estado 1: ¿El precio cambia? (solo si ya hay precio configurado) -->
+      <div id="precioState1">
+        <div class="modal-header">
+          <h3 class="modal-title">Precio mensual</h3>
+        </div>
+        <p class="modal-desc">Se asignó una clase. El precio mensual actual del alumno es:</p>
+        <div class="precio-actual-display">$<span id="precioActualDisplay">0</span></div>
+        <p class="modal-desc" style="margin-top:0.75rem">¿El monto del <strong>siguiente mes</strong> va a cambiar?</p>
+        <div class="modal-actions" style="margin-top:1rem">
+          <button class="btn-cancelar" id="btnPrecioNoChange">El precio no cambia</button>
+          <button class="btn-guardar" id="btnPrecioSiChange">Sí, cambiar precio</button>
+        </div>
+      </div>
+
+      <!-- Estado 2: Ingresar nuevo precio -->
+      <div id="precioState2" style="display:none">
+        <div class="modal-header">
+          <h3 class="modal-title">Nuevo precio mensual</h3>
+        </div>
+        <p class="modal-desc">¿Cuál será el monto mensual a partir del siguiente mes?</p>
+        <div class="form-group">
+          <label class="form-label">Monto mensual ($)</label>
+          <input type="number" id="precioMensualInput" class="info-input" placeholder="Ej. 1500" min="0" step="0.01"/>
+        </div>
+        <div id="precioMensualError" class="form-error" style="display:none"></div>
+        <div class="modal-actions" style="margin-top:1rem">
+          <button class="btn-cancelar" id="btnPrecioVolver" style="display:none">Volver</button>
+          <button class="btn-guardar" id="btnPrecioGuardar">
+            <span class="btn-text">Guardar</span>
+            <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: Cargo extra del mes -->
+  <div class="modal-overlay" id="modalCargoExtra" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Cargo extra del mes</h3>
+      </div>
+      <p class="modal-desc">¿Deseas registrar un cargo extra para <strong id="cargoExtraMesLabel">este mes</strong>? Aplica si el alumno tomó clases adicionales y ya se realizó su cobro mensual.</p>
+      <div class="form-group">
+        <label class="form-label">Monto rápido</label>
+        <div class="opciones-btns">
+          <button class="btn-monto-rapido" data-val="300">$300</button>
+          <button class="btn-monto-rapido" data-val="500">$500</button>
+          <button class="btn-monto-rapido" data-val="750">$750</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Monto personalizado ($) <span style="opacity:0.5;font-weight:400;font-size:0.85em">— opcional</span></label>
+        <input type="number" id="cargoExtraMonto" class="info-input" placeholder="O ingresa el monto aquí" min="0" step="0.01"/>
+      </div>
+      <div class="modal-actions" style="margin-top:1rem">
+        <button class="btn-sin-inscripcion" id="btnSinCargoExtra">Sin cargo extra</button>
+        <button class="btn-guardar" id="btnRegistrarCargoExtra">
+          <span class="btn-text">Registrar cargo</span>
           <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
         </button>
       </div>

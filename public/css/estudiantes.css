@@ -32,6 +32,9 @@
 .topbar-info { flex: 1; }
 .topbar-title { font-size: 1.4rem; font-weight: 700; color: #fff; line-height: 1.1; }
 .topbar-sub { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+.topbar-actions { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+.btn-dashboard { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background 0.2s; flex-shrink: 0; }
+.btn-dashboard:hover { background: rgba(255,255,255,0.22); }
 .btn-nuevo { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.1rem; background: #1e3a8a; border: none; border-radius: 999px; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.2s; flex-shrink: 0; }
 .btn-nuevo:hover { background: #1e40af; transform: translateY(-1px); }
 .btn-nuevo svg { width: 16px; height: 16px; }

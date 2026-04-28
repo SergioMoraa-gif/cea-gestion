@@ -5,6 +5,26 @@
 
 const supabase = require('../config/db')
 
+const TIPOS_VALIDOS = ['individual', 'grupal', 'matros']
+
+function normalizar(h) {
+  return {
+    id:            h.id_horario,
+    id_horario:    h.id_horario,
+    estudiante_id: h.id_estudiante,
+    id_estudiante: h.id_estudiante,
+    maestro_id:    h.id_maestro,
+    id_maestro:    h.id_maestro,
+    dia:           h.dia,
+    hora_inicio:   h.hora_inicio,
+    hora_fin:      h.hora_final,
+    hora_final:    h.hora_final,
+    tipo:          h.tipo,
+    duracion:      h.duracion,
+    alberca:       h.alberca
+  }
+}
+
 // GET /api/horarios/maestro/:id
 async function porMaestro(req, res) {
   const { id } = req.params
@@ -16,25 +36,7 @@ async function porMaestro(req, res) {
       .order('dia')
       .order('hora_inicio')
     if (error) return res.status(500).json({ message: error.message })
-
-    // Normalizar para compatibilidad con el frontend
-    const horarios = (data || []).map(h => ({
-      id:            h.id_horario,
-      id_horario:    h.id_horario,
-      estudiante_id: h.id_estudiante,
-      id_estudiante: h.id_estudiante,
-      maestro_id:    h.id_maestro,
-      id_maestro:    h.id_maestro,
-      clase_id:      null,
-      dia:           h.dia,
-      hora_inicio:   h.hora_inicio,
-      hora_fin:      h.hora_final,
-      hora_final:    h.hora_final,
-      tipo:          h.tipo,
-      duracion:      h.duracion
-    }))
-
-    res.json({ horarios })
+    res.json({ horarios: (data || []).map(normalizar) })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
@@ -49,23 +51,20 @@ async function porEstudiante(req, res) {
       .order('dia')
       .order('hora_inicio')
     if (error) return res.status(500).json({ message: error.message })
+    res.json({ horarios: (data || []).map(normalizar) })
+  } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
+}
 
-    const horarios = (data || []).map(h => ({
-      id:            h.id_horario,
-      id_horario:    h.id_horario,
-      estudiante_id: h.id_estudiante,
-      id_estudiante: h.id_estudiante,
-      maestro_id:    h.id_maestro,
-      id_maestro:    h.id_maestro,
-      dia:           h.dia,
-      hora_inicio:   h.hora_inicio,
-      hora_fin:      h.hora_final,
-      hora_final:    h.hora_final,
-      tipo:          h.tipo,
-      duracion:      h.duracion
-    }))
-
-    res.json({ horarios })
+// GET /api/horarios/global — Todos los horarios de todos los maestros
+async function global(req, res) {
+  try {
+    const { data, error } = await supabase
+      .from('HorariosAlumnos')
+      .select('*')
+      .order('dia')
+      .order('hora_inicio')
+    if (error) return res.status(500).json({ message: error.message })
+    res.json({ horarios: (data || []).map(normalizar) })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
@@ -75,30 +74,54 @@ async function crear(req, res) {
     estudiante_id, id_estudiante,
     maestro_id,    id_maestro,
     dia, hora_inicio, hora_fin, hora_final,
-    tipo, duracion
+    tipo, duracion, alberca
   } = req.body
 
-  const estId  = id_estudiante || estudiante_id
+  const estId   = id_estudiante || estudiante_id
   const maestId = id_maestro   || maestro_id
   const horaFin = hora_final   || hora_fin
 
   if (!estId || !maestId || !dia || !hora_inicio)
     return res.status(400).json({ message: 'Faltan datos requeridos.' })
 
-  try {
-    // Verificar conflicto — individual no puede solaparse
-    const tipoBloque = tipo || 'individual'
-    if (tipoBloque === 'individual') {
-      const { data: existing } = await supabase
-        .from('HorariosAlumnos')
-        .select('id_horario')
-        .eq('id_maestro', maestId)
-        .eq('dia', dia)
-        .eq('hora_inicio', hora_inicio)
-        .eq('tipo', 'individual')
+  if (!alberca || (alberca !== 1 && alberca !== 2))
+    return res.status(400).json({ message: 'Debes seleccionar alberca 1 o 2.' })
 
-      if (existing && existing.length > 0)
-        return res.status(409).json({ message: 'Este horario ya está ocupado por una clase individual.' })
+  const tipoBloque  = TIPOS_VALIDOS.includes(tipo) ? tipo : 'individual'
+  const duracionMin = parseInt(duracion) || 30
+  const [hh, mm]    = hora_inicio.split(':').map(Number)
+  const newStart    = hh * 60 + mm
+  const newEnd      = newStart + duracionMin
+
+  try {
+    // Traer todos los bloques del mismo día para validar conflictos
+    const { data: existentes } = await supabase
+      .from('HorariosAlumnos')
+      .select('id_horario, id_maestro, hora_inicio, duracion, tipo, alberca')
+      .eq('dia', dia)
+
+    const esGrupalOMatros = (t) => t === 'grupal' || t === 'matros'
+
+    if (existentes && existentes.length > 0) {
+      for (const ex of existentes) {
+        const [exH, exM] = ex.hora_inicio.split(':').map(Number)
+        const exStart    = exH * 60 + exM
+        const exEnd      = exStart + (ex.duracion || 30)
+
+        if (!(newStart < exEnd && exStart < newEnd)) continue // no se solapan, ignorar
+
+        // Conflicto con el mismo maestro — excepción: unirse al mismo grupo (grupal o matros)
+        if (parseInt(ex.id_maestro) === parseInt(maestId)) {
+          if (esGrupalOMatros(tipoBloque) && tipoBloque === ex.tipo && exStart === newStart && ex.alberca === parseInt(alberca)) continue
+          return res.status(409).json({ message: 'El maestro ya tiene una clase en ese horario.' })
+        }
+
+        // Conflicto de alberca — excepción: unirse al mismo grupo en la misma alberca y hora exacta
+        if (ex.alberca === parseInt(alberca)) {
+          if (esGrupalOMatros(tipoBloque) && tipoBloque === ex.tipo && exStart === newStart) continue
+          return res.status(409).json({ message: `La alberca ${alberca} ya está ocupada en ese horario.` })
+        }
+      }
     }
 
     const { data, error } = await supabase
@@ -110,42 +133,31 @@ async function crear(req, res) {
         hora_inicio,
         hora_final:    horaFin,
         tipo:          tipoBloque,
-        duracion:      duracion || 30
+        duracion:      duracionMin,
+        alberca:       parseInt(alberca)
       }])
       .select()
       .single()
 
     if (error) return res.status(500).json({ message: error.message })
 
-    res.status(201).json({
-      message: 'Horario asignado.',
-      horario: {
-        id:            data.id_horario,
-        id_horario:    data.id_horario,
-        estudiante_id: data.id_estudiante,
-        maestro_id:    data.id_maestro,
-        dia:           data.dia,
-        hora_inicio:   data.hora_inicio,
-        hora_fin:      data.hora_final,
-        tipo:          data.tipo,
-        duracion:      data.duracion
-      }
-    })
+    res.status(201).json({ message: 'Horario asignado.', horario: normalizar(data) })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
-// PATCH /api/horarios/:id — Modificar un bloque (tipo, duración, hora_inicio, hora_final, dia)
+// PATCH /api/horarios/:id — Modificar un bloque
 async function actualizar(req, res) {
   const { id } = req.params
-  const { dia, hora_inicio, hora_fin, hora_final, tipo, duracion } = req.body
+  const { dia, hora_inicio, hora_fin, hora_final, tipo, duracion, alberca } = req.body
   const horaFin = hora_final || hora_fin
 
   const updates = {}
-  if (dia)         updates.dia         = dia
-  if (hora_inicio) updates.hora_inicio = hora_inicio
-  if (horaFin)     updates.hora_final  = horaFin
-  if (tipo)        updates.tipo        = tipo
-  if (duracion)    updates.duracion    = duracion
+  if (dia)                                         updates.dia         = dia
+  if (hora_inicio)                                 updates.hora_inicio = hora_inicio
+  if (horaFin)                                     updates.hora_final  = horaFin
+  if (tipo && TIPOS_VALIDOS.includes(tipo))        updates.tipo        = tipo
+  if (duracion)                                    updates.duracion    = parseInt(duracion)
+  if (alberca && (alberca === 1 || alberca === 2)) updates.alberca     = parseInt(alberca)
 
   try {
     const { data, error } = await supabase
@@ -155,7 +167,7 @@ async function actualizar(req, res) {
       .select()
       .single()
     if (error) return res.status(500).json({ message: error.message })
-    res.json({ message: 'Horario actualizado.', horario: data })
+    res.json({ message: 'Horario actualizado.', horario: normalizar(data) })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
@@ -181,4 +193,4 @@ async function eliminar(req, res) {
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
-module.exports = { porMaestro, porEstudiante, crear, actualizar, eliminar, eliminarPorEstudiante }
+module.exports = { porMaestro, porEstudiante, crear, actualizar, eliminar, eliminarPorEstudiante, global }

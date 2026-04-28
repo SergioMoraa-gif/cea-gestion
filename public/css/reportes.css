@@ -53,6 +53,7 @@
 .resumen-valor { font-size: 1.5rem; font-weight: 800; color: #fff; }
 .resumen-valor.verde    { color: #6ee7b7; }
 .resumen-valor.amarillo { color: #fcd34d; }
+.resumen-valor.rojo     { color: #f87171; }
 .resumen-valor.azul     { color: #93c5fd; }
 .resumen-valor.blanco   { color: #fff; }
 
@@ -85,12 +86,12 @@
 /* Badges */
 .badge-estado { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .badge-pagado      { background: rgba(16,185,129,0.2);  color: #6ee7b7; }
-.badge-pendiente   { background: rgba(245,158,11,0.2);  color: #fcd34d; }
-.badge-en_transito { background: rgba(37,99,235,0.2);   color: #93c5fd; }
+.badge-pendiente   { background: rgba(248,113,113,0.2); color: #f87171; }
+.badge-en_transito { background: rgba(245,158,11,0.2);  color: #fcd34d; }
 .dot-badge { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .dot-pagado      { background: #6ee7b7; }
-.dot-pendiente   { background: #fcd34d; }
-.dot-en_transito { background: #93c5fd; }
+.dot-pendiente   { background: #f87171; }
+.dot-en_transito { background: #fcd34d; }
 
 /* Responsive */
 @media (max-width: 900px) {

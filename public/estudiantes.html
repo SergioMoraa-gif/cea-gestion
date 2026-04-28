@@ -62,10 +62,16 @@
         <h1 class="topbar-title">Estudiantes</h1>
         <span class="topbar-sub">Inscripción y seguimiento de alumnos</span>
       </div>
-      <button class="btn-nuevo" id="btnNuevo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Nuevo estudiante
-      </button>
+      <div class="topbar-actions">
+        <a href="dashboard.html" class="btn-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <button class="btn-nuevo" id="btnNuevo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo estudiante
+        </button>
+      </div>
     </header>
 
     <!-- FORMULARIO NUEVO ESTUDIANTE -->
@@ -84,13 +90,13 @@
         </div>
         <div class="form-group">
           <label class="form-label">Folio</label>
-          <input type="text" id="inputFolio" class="form-input" placeholder="Ej. 001"/>
+          <input type="text" id="inputFolio" class="form-input" placeholder="Ej. 001 o 001A" maxlength="10"/>
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Teléfono</label>
-        <input type="text" id="inputTelefono" class="form-input" placeholder="Ej. 229 123 4567"/>
+        <input type="text" id="inputTelefono" class="form-input" placeholder="Ej. 2291234567" maxlength="15"/>
       </div>
 
       <div id="formError" class="form-error" style="display:none"></div>
@@ -109,19 +115,7 @@
       <div id="seccionMaestros" style="display:none">
         <div class="maestros-label">Selecciona un maestro para asignar horario:</div>
         <div class="maestros-btns" id="maestrosBtns"></div>
-        <div class="maestros-hint">Puedes asignar bloques con varios maestros. Cuando termines, guarda el perfil del alumno.</div>
-        <div class="form-group" style="margin-top:1rem">
-          <label class="form-label">Precio mensual ($)</label>
-          <input type="number" id="inputPrecio" class="form-input" placeholder="Ej. 500" min="0" step="0.01"/>
-        </div>
-        <div class="form-actions" style="margin-top:1rem">
-          <button class="btn-guardar" id="btnFinalizarInscripcion">
-            <span class="btn-text">Finalizar inscripción</span>
-            <span class="btn-loader" style="display:none">
-              <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-            </span>
-          </button>
-        </div>
+        <div class="maestros-hint">Puedes asignar bloques con varios maestros. Cuando termines, presiona "Guardar horario" para ir al perfil del alumno.</div>
       </div>
     </section>
 
@@ -167,15 +161,13 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Nombre</label>
-          <input type="text" id="editNombre" class="form-input"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Folio</label>
-          <input type="text" id="editFolio" class="form-input"/>
-        </div>
+      <div class="form-group">
+        <label class="form-label">Nombre</label>
+        <input type="text" id="editNombre" class="form-input"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Folio</label>
+        <input type="text" id="editFolio" class="form-input"/>
       </div>
       <div class="form-group">
         <label class="form-label">Teléfono</label>

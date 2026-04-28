@@ -3,19 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CEA — Calendario del Maestro</title>
+  <title>CEA — Calendario Global</title>
   <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/perfil-maestro.css" />
+  <link rel="stylesheet" href="css/calendario-global.css" />
 </head>
 <body>
+
   <div class="bg-image"></div>
   <div class="bg-overlay"></div>
 
+  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <span class="sidebar-brand">CEA</span>
       <button class="sidebar-close" id="sidebarClose">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
       </button>
     </div>
     <nav class="sidebar-nav">
@@ -52,24 +56,40 @@
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <main class="main-content">
+
+    <!-- Encabezado solo para impresión -->
+    <div id="printHeader" class="print-header">
+      <div class="print-header-logo">CEA</div>
+      <div class="print-header-info">
+        <div class="print-header-title">Calendario Global de Horarios</div>
+        <div class="print-header-sub" id="printHeaderSub">Todos los maestros — semana completa</div>
+      </div>
+      <div class="print-header-date" id="printHeaderDate"></div>
+    </div>
+
     <header class="topbar">
       <button class="btn-menu" id="btnMenu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
       </button>
       <div class="topbar-info">
-        <h1 class="topbar-title" id="tituloMaestro">Cargando...</h1>
-        <span class="topbar-sub" id="subtituloMaestro">Calendario semanal</span>
+        <h1 class="topbar-title">Calendario Global</h1>
+        <span class="topbar-sub">Todos los maestros — semana completa</span>
       </div>
       <div class="topbar-actions">
-        <a href="dashboard.html" class="btn-dashboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Dashboard
-        </a>
-        <select id="selectorMaestro" class="selector-maestro"></select>
         <button class="btn-imprimir" id="btnImprimir">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Imprimir PDF
         </button>
+        <a href="dashboard.html" class="btn-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <a href="maestros.html" class="btn-maestros">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Maestros
+        </a>
       </div>
     </header>
 
@@ -77,66 +97,45 @@
     <div class="banner-nuevo" id="bannerNuevo" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span id="bannerTexto">—</span>
-      <button class="btn-cancelar-asign" id="btnCancelarAsign">← Cancelar</button>
-      <button class="btn-guardar-horario" id="btnGuardarHorario">Guardar horario →</button>
+      <button class="btn-cancelar-asign" id="btnCancelarAsign">← Regresar</button>
     </div>
 
-    <!-- Encabezado solo para impresión -->
-    <div id="printHeader" class="print-header">
-      <div class="print-header-logo">CEA</div>
-      <div class="print-header-info">
-        <div class="print-header-title" id="printHeaderTitle">Horario del Maestro</div>
-        <div class="print-header-sub" id="printHeaderSub">Calendario semanal</div>
-      </div>
-      <div class="print-header-date" id="printHeaderDate"></div>
+    <!-- Leyenda de maestros -->
+    <div class="leyenda-wrap" id="leyendaWrap" style="display:none">
+      <div class="leyenda" id="leyenda"></div>
     </div>
 
+    <!-- Calendario -->
     <section class="calendario-wrapper">
       <div id="loadingCal" class="loading-msg">Cargando calendario...</div>
       <div class="calendario-scroll" id="calendarioScroll" style="display:none">
         <table class="calendario" id="tablaCal">
-          <thead id="calendarioHead"></thead>
-          <tbody id="calendarioBody"></tbody>
+          <thead id="calHead"></thead>
+          <tbody id="calBody"></tbody>
         </table>
       </div>
     </section>
+
   </main>
 
-  <!-- MODAL: Lista de alumnos del bloque -->
-  <div class="modal-overlay" id="modalBloque" style="display:none">
+  <!-- MODAL: Asignar bloque en slot libre -->
+  <div class="modal-overlay" id="modalAsignar" style="display:none">
     <div class="modal-box">
-      <div class="modal-bloque-header">
-        <div>
-          <div class="modal-bloque-hora" id="modalBloqueHora">—</div>
-          <div class="modal-bloque-clase" id="modalBloqueClase">—</div>
-          <div class="modal-bloque-maestro" id="modalBloqueMaestro">—</div>
-        </div>
-        <button class="btn-cerrar-form" id="modalBloqueCerrar">
+      <div class="modal-header">
+        <h3 class="modal-title">Asignar clase</h3>
+        <button class="btn-cerrar-form" id="modalAsignarCerrar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-
-      <div class="modal-bloque-count" id="modalBloqueCount">— alumnos</div>
-      <div class="modal-bloque-lista" id="modalBloqueListaAlumnos"></div>
-
-      <div class="modal-actions" id="modalBloqueAcciones" style="display:none">
-        <button class="btn-cancelar" id="modalBloqueNoUnirse">Cancelar</button>
-        <button class="btn-guardar" id="modalBloqueAgregar">
-          <span class="btn-text">Agregar al grupo</span>
-          <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: Asignar bloque (tipo + duración) -->
-  <div class="modal-overlay" id="modalAsignar" style="display:none">
-    <div class="modal-box">
-      <h3 class="modal-title">Asignar bloque</h3>
       <div class="modal-asignar-info">
-        <span class="modal-asignar-alumno" id="modalAsignarAlumno">—</span>
-        <span class="modal-asignar-sep">·</span>
-        <span class="modal-asignar-dia" id="modalAsignarDia">—</span>
+        <span class="modal-asignar-alumno" id="modalAsignarNombre">—</span>
+        <span class="modal-sep">·</span>
+        <span class="modal-asignar-slot" id="modalAsignarSlot">—</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Maestro</label>
+        <select id="modalAsignarMaestro" class="form-select"></select>
       </div>
 
       <div class="form-group">
@@ -168,19 +167,47 @@
         <button class="btn-cancelar" id="modalAsignarCancelar">Cancelar</button>
         <button class="btn-guardar" id="modalAsignarConfirmar">
           <span class="btn-text">Confirmar</span>
-          <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
+          <span class="btn-loader" style="display:none">
+            <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: Editar bloque existente -->
+  <!-- MODAL: Grupo — info + opción de unirse -->
+  <div class="modal-overlay" id="modalGrupo" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-bloque-hora" id="modalGrupoSlot">—</div>
+          <div class="modal-bloque-clase" id="modalGrupoMaestro">—</div>
+        </div>
+        <button class="btn-cerrar-form" id="modalGrupoCerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-bloque-count" id="modalGrupoCount">— alumnos</div>
+      <div class="modal-bloque-lista" id="modalGrupoAlumnos"></div>
+      <div class="modal-actions" id="modalGrupoAcciones" style="display:none">
+        <button class="btn-cancelar" id="modalGrupoNoUnirse">Cancelar</button>
+        <button class="btn-guardar" id="modalGrupoUnirse">
+          <span class="btn-text">Unirse al grupo</span>
+          <span class="btn-loader" style="display:none">
+            <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Editar bloque existente (calendario global) -->
   <div class="modal-overlay" id="modalEditar" style="display:none">
     <div class="modal-box">
       <div class="modal-bloque-header">
         <div>
           <div class="modal-bloque-hora" id="modalEditarInfo">—</div>
-          <div class="modal-bloque-maestro" id="modalEditarMaestro">—</div>
+          <div class="modal-bloque-clase" id="modalEditarMaestro">—</div>
         </div>
         <button class="btn-cerrar-form" id="modalEditarCerrar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -230,7 +257,6 @@
         </div>
       </div>
 
-      <!-- Lista de alumnos (grupal/matros) -->
       <div id="modalEditarSecAlumnos" style="display:none">
         <div class="modal-bloque-count" id="modalEditarCount">—</div>
         <div class="modal-bloque-lista" id="modalEditarListaAlumnos"></div>
@@ -243,7 +269,6 @@
         </div>
       </div>
 
-      <!-- Solo individual: nombre del alumno -->
       <div id="modalEditarSecIndividual" style="display:none">
         <div class="modal-bloque-count" id="modalEditarAlumnoNombre">—</div>
       </div>
@@ -258,6 +283,6 @@
     </div>
   </div>
 
-  <script src="js/perfil-maestro.js"></script>
+  <script src="js/calendario-global.js"></script>
 </body>
 </html>

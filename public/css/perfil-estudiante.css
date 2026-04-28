@@ -82,7 +82,7 @@
 .bloque-vacio.asignando:hover { background: rgba(37,99,235,0.28); }
 
 .bloque-clase { width: 100%; min-height: 36px; border-radius: 6px; padding: 3px 6px; cursor: pointer; display: flex; flex-direction: column; justify-content: center; transition: opacity 0.15s; position: relative; }
-.bloque-clase.bloque-grande { min-height: 112px; justify-content: flex-start; padding: 7px; }
+.bloque-clase.bloque-grande { min-height: 68px; justify-content: flex-start; padding: 7px; }
 .bloque-clase:hover { opacity: 0.8; }
 .bc-maestro { font-size: 0.68rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bc-tipo { font-size: 0.58rem; opacity: 0.7; white-space: nowrap; }
@@ -144,6 +144,34 @@
 .btn-tipo, .btn-duracion { padding: 0.5rem 1rem; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 999px; color: rgba(255,255,255,0.6); font-size: 0.82rem; font-weight: 500; cursor: pointer; font-family: var(--font-main); transition: all 0.18s; }
 .btn-tipo:hover, .btn-duracion:hover { background: rgba(255,255,255,0.15); color: #fff; }
 .btn-tipo.activo, .btn-duracion.activo { background: rgba(37,99,235,0.35); border-color: #2563eb; color: #fff; font-weight: 700; }
+
+/* Botones modal editar bloque */
+.btn-tipo-ed, .btn-dur-ed, .btn-alb-ed, .btn-monto-rapido { padding: 0.5rem 1rem; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 999px; color: rgba(255,255,255,0.6); font-size: 0.82rem; font-weight: 500; cursor: pointer; font-family: var(--font-main); transition: all 0.18s; }
+.btn-tipo-ed:hover, .btn-dur-ed:hover, .btn-alb-ed:hover, .btn-monto-rapido:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.btn-tipo-ed.activo, .btn-dur-ed.activo, .btn-alb-ed.activo, .btn-monto-rapido.activo { background: rgba(37,99,235,0.35); border-color: #2563eb; color: #fff; font-weight: 700; }
+.btn-dur-ed.deshabilitado { opacity: 0.35; cursor: not-allowed; }
+
+.precio-actual-display { font-size: 2rem; font-weight: 700; color: #fff; text-align: center; margin: 0.5rem 0 0.25rem; letter-spacing: -0.02em; }
+
+.form-row-doble { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+
+.btn-eliminar-bloque { padding: 0.65rem 1.2rem; background: rgba(220,38,38,0.5); border: 1px solid rgba(220,38,38,0.6); border-radius: 999px; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); }
+.btn-eliminar-bloque:hover { background: rgba(220,38,38,0.72); }
+
+.modal-actions-editar { justify-content: space-between; }
+
+/* Botones modal inscripción */
+.btn-sin-inscripcion { padding: 0.65rem 1.2rem; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 999px; color: rgba(255,255,255,0.75); font-size: 0.85rem; font-weight: 500; cursor: pointer; font-family: var(--font-main); transition: background 0.2s, border-color 0.2s; }
+.btn-sin-inscripcion:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+.btn-sin-inscripcion-confirm { padding: 0.65rem 1.4rem; background: rgba(220,38,38,0.45); border: 1px solid rgba(220,38,38,0.6); border-radius: 999px; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); }
+.btn-sin-inscripcion-confirm:hover { background: rgba(220,38,38,0.65); }
+
+/* Header de bloque en modal */
+.modal-bloque-header { display: flex; align-items: flex-start; justify-content: space-between; }
+.modal-bloque-hora   { font-size: 1rem; font-weight: 700; color: #fff; }
+.modal-bloque-maestro { font-size: 0.82rem; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.modal-bloque-count  { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 0.4rem; }
+.modal-bloque-lista  { display: flex; flex-direction: column; gap: 0.35rem; max-height: 160px; overflow-y: auto; }
 
 .modal-bloque-info { font-size: 0.85rem; color: rgba(255,255,255,0.65); }
 .modal-bloque-info strong { color: #fff; }

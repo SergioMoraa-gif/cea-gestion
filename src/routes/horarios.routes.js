@@ -1,7 +1,8 @@
 const express = require('express')
 const router  = express.Router()
-const { porMaestro, porEstudiante, crear, actualizar, eliminar, eliminarPorEstudiante } = require('../controllers/horarios.controller')
+const { porMaestro, porEstudiante, crear, actualizar, eliminar, eliminarPorEstudiante, global } = require('../controllers/horarios.controller')
 
+router.get('/global',            global)
 router.get('/maestro/:id',       porMaestro)
 router.get('/estudiante/:id',    porEstudiante)
 router.post('/',                 crear)
