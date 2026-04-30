@@ -291,9 +291,143 @@ function generarRecibo(pagoId) {
   v.document.close()
 }
 
-window.abrirModalPago   = abrirModalPago
-window.generarRecibo    = generarRecibo
+window.abrirModalPago    = abrirModalPago
+window.generarRecibo     = generarRecibo
 window.confirmarEliminar = confirmarEliminar
+
+// --- Cargo adelantado ---
+let cargoAlumnoId = null
+let cargoEstado   = 'pendiente'
+
+function abrirModalCargo() {
+  cargoAlumnoId = null
+  cargoEstado   = 'pendiente'
+
+  document.getElementById('cargoBuscar').value             = ''
+  document.getElementById('cargoResultados').style.display = 'none'
+  document.getElementById('cargoAlumnoChip').style.display = 'none'
+  document.getElementById('cargoMonto').value              = ''
+  document.getElementById('cargoError').style.display      = 'none'
+  document.getElementById('cargoMetodoWrap').style.display = 'none'
+  document.getElementById('cargoMetodo').value             = ''
+
+  const sel = document.getElementById('cargoMes')
+  sel.innerHTML = ''
+  const hoy = new Date()
+  for (let i = 0; i < 13; i++) {
+    const d   = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1)
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+    const opt = document.createElement('option')
+    opt.value       = val
+    opt.textContent = `${MESES[d.getMonth()]} ${d.getFullYear()}`
+    sel.appendChild(opt)
+  }
+
+  actualizarBotonesEstadoCargo('pendiente')
+  document.getElementById('modalCargo').style.display = 'flex'
+}
+
+function actualizarBotonesEstadoCargo(estado) {
+  cargoEstado = estado
+  document.querySelectorAll('.btn-estado-cargo').forEach(b =>
+    b.classList.toggle('activo', b.dataset.val === estado)
+  )
+  document.getElementById('cargoMetodoWrap').style.display = estado === 'pagado' ? 'block' : 'none'
+}
+
+document.querySelectorAll('.btn-estado-cargo').forEach(b =>
+  b.addEventListener('click', () => actualizarBotonesEstadoCargo(b.dataset.val))
+)
+
+document.getElementById('cargoBuscar').addEventListener('input', function () {
+  const q      = this.value.toLowerCase().trim()
+  const resDiv = document.getElementById('cargoResultados')
+  if (!q) { resDiv.style.display = 'none'; return }
+
+  const matches = estudiantesData
+    .filter(e => e.activo !== false && (
+      e.nombre.toLowerCase().includes(q) ||
+      (e.folio || '').toLowerCase().includes(q)
+    ))
+    .slice(0, 6)
+
+  if (matches.length === 0) { resDiv.style.display = 'none'; return }
+
+  resDiv.innerHTML = ''
+  matches.forEach(e => {
+    const item = document.createElement('div')
+    item.className = 'buscar-resultado-item'
+    item.innerHTML = `<strong>${e.nombre}</strong>${e.folio ? `<span>Folio ${e.folio}</span>` : ''}`
+    item.addEventListener('click', () => seleccionarAlumnoCargo(e))
+    resDiv.appendChild(item)
+  })
+  resDiv.style.display = 'block'
+})
+
+function seleccionarAlumnoCargo(e) {
+  cargoAlumnoId = e.id_estudiante
+  document.getElementById('cargoBuscar').value             = ''
+  document.getElementById('cargoResultados').style.display = 'none'
+
+  const chip = document.getElementById('cargoAlumnoChip')
+  chip.innerHTML = `<span>${e.nombre}${e.folio ? ` · Folio ${e.folio}` : ''}</span>
+    <button class="chip-quitar" onclick="limpiarAlumnoCargo()">×</button>`
+  chip.style.display = 'flex'
+
+  if (e.precio_mensual) document.getElementById('cargoMonto').value = e.precio_mensual
+}
+
+window.limpiarAlumnoCargo = function () {
+  cargoAlumnoId = null
+  document.getElementById('cargoAlumnoChip').style.display = 'none'
+  document.getElementById('cargoBuscar').value             = ''
+  document.getElementById('cargoMonto').value              = ''
+}
+
+document.getElementById('modalCargoCerrar').addEventListener('click',   () => document.getElementById('modalCargo').style.display = 'none')
+document.getElementById('modalCargoCancelar').addEventListener('click', () => document.getElementById('modalCargo').style.display = 'none')
+
+document.getElementById('modalCargoGuardar').addEventListener('click', async () => {
+  const errEl  = document.getElementById('cargoError')
+  const monto  = parseFloat(document.getElementById('cargoMonto').value)
+  const mes    = document.getElementById('cargoMes').value
+  const metodo = document.getElementById('cargoMetodo').value
+
+  if (!cargoAlumnoId)              { errEl.textContent = 'Selecciona un alumno.';      errEl.style.display = 'block'; return }
+  if (isNaN(monto) || monto < 0)   { errEl.textContent = 'Ingresa un monto válido.';  errEl.style.display = 'block'; return }
+  if (cargoEstado === 'pagado' && !metodo) { errEl.textContent = 'Selecciona un método de pago.'; errEl.style.display = 'block'; return }
+
+  const btn = document.getElementById('modalCargoGuardar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+  errEl.style.display = 'none'
+
+  try {
+    const body = { id_estudiante: cargoAlumnoId, mes, monto, estado: cargoEstado, tipo: 'mensual' }
+    if (cargoEstado === 'pagado') {
+      body.metodo     = metodo
+      body.fecha_pago = new Date().toISOString()
+    }
+
+    const res  = await fetch('/api/pagos', { method: 'POST', headers, body: JSON.stringify(body) })
+    const data = await res.json()
+
+    if (data.existe) { errEl.textContent = 'Ya existe un cargo para ese alumno en ese mes.'; errEl.style.display = 'block'; return }
+    if (!res.ok)     { errEl.textContent = data.message || 'Error al guardar.'; errEl.style.display = 'block'; return }
+
+    document.getElementById('modalCargo').style.display = 'none'
+    await cargarPagos()
+  } catch (err) {
+    errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+})
+
+document.getElementById('btnCargo').addEventListener('click', abrirModalCargo)
 
 // --- Filtros ---
 document.getElementById('filtroEstado').addEventListener('change',  cargarPagos)

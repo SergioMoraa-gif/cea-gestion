@@ -1,0 +1,193 @@
+/* ================================
+   calendario-grupos.css — CEA
+   ================================ */
+
+.grupos-wrapper {
+  padding: 1rem 1.5rem 3rem;
+}
+
+/* ─── Scroll container ─────────────────────────────────────── */
+#gruposScroll {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* ─── Sección por par de días ──────────────────────────────── */
+.grupos-seccion {
+  break-after: page;
+  page-break-after: always;
+}
+
+.grupos-seccion:last-child {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Título de sección */
+.grupos-seccion-titulo {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1.5px solid var(--glass-border);
+  color: #ffffff;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-style: italic;
+  padding: 0.6rem 1rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(10, 20, 80, 0.3);
+}
+
+/* ─── Grid de tarjetas ─────────────────────────────────────── */
+.grupos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.9rem;
+}
+
+/* ─── Tarjeta individual ───────────────────────────────────── */
+.grupo-card {
+  border: 1.5px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(10, 20, 80, 0.35);
+}
+
+.grupo-card-header {
+  background: rgba(10, 25, 90, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 0.5rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-align: center;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  line-height: 1.35;
+}
+
+/* ─── Filas de alumnos ─────────────────────────────────────── */
+.grupo-card-rows {
+  /* color class aplicado dinámicamente */
+}
+
+.grupo-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  min-height: 1.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.grupo-card-row-empty {
+  min-height: 1.65rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.grupo-row-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grupo-row-folio {
+  font-size: 0.76rem;
+  flex-shrink: 0;
+  margin-left: 0.4rem;
+  opacity: 0.85;
+}
+
+.grupo-row-asterisco {
+  color: #dc2626;
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+
+/* ─── Colores de maestro (fondo de filas) ──────────────────── */
+.grupo-card-rows.color-0 .grupo-card-row { background: rgba(37,  99,  235, 0.28); color: #dbeafe; }
+.grupo-card-rows.color-1 .grupo-card-row { background: rgba(16,  185, 129, 0.28); color: #d1fae5; }
+.grupo-card-rows.color-2 .grupo-card-row { background: rgba(245, 158, 11,  0.32); color: #fef3c7; }
+.grupo-card-rows.color-3 .grupo-card-row { background: rgba(139, 92,  246, 0.28); color: #ede9fe; }
+.grupo-card-rows.color-4 .grupo-card-row { background: rgba(236, 72,  153, 0.28); color: #fce7f3; }
+.grupo-card-rows.color-5 .grupo-card-row { background: rgba(239, 68,  68,  0.28); color: #fee2e2; }
+.grupo-card-rows.color-6 .grupo-card-row { background: rgba(20,  184, 166, 0.28); color: #ccfbf1; }
+.grupo-card-rows.color-7 .grupo-card-row { background: rgba(234, 179, 8,   0.32); color: #fef9c3; }
+
+/* ─── Impresión ────────────────────────────────────────────── */
+@media print {
+  #gruposScroll {
+    display: block !important;
+  }
+
+  .grupos-seccion {
+    display: block !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .grupos-seccion:last-child {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  .topbar,
+  .sidebar,
+  .sidebar-backdrop,
+  .btn-imprimir {
+    display: none !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .grupos-wrapper {
+    padding: 0 !important;
+  }
+
+  .print-header {
+    display: flex !important;
+  }
+
+  .grupos-seccion-titulo {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .grupo-card-header {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Colores sólidos para impresión */
+  .grupo-card-rows.color-0 .grupo-card-row { background: #bfdbfe !important; }
+  .grupo-card-rows.color-1 .grupo-card-row { background: #bbf7d0 !important; }
+  .grupo-card-rows.color-2 .grupo-card-row { background: #fed7aa !important; }
+  .grupo-card-rows.color-3 .grupo-card-row { background: #ddd6fe !important; }
+  .grupo-card-rows.color-4 .grupo-card-row { background: #fbcfe8 !important; }
+  .grupo-card-rows.color-5 .grupo-card-row { background: #fecaca !important; }
+  .grupo-card-rows.color-6 .grupo-card-row { background: #99f6e4 !important; }
+  .grupo-card-rows.color-7 .grupo-card-row { background: #fef08a !important; }
+
+  .grupo-card-rows.color-0 .grupo-card-row-empty { background: #eff6ff !important; }
+  .grupo-card-rows.color-1 .grupo-card-row-empty { background: #f0fdf4 !important; }
+  .grupo-card-rows.color-2 .grupo-card-row-empty { background: #fff7ed !important; }
+  .grupo-card-rows.color-3 .grupo-card-row-empty { background: #f5f3ff !important; }
+  .grupo-card-rows.color-4 .grupo-card-row-empty { background: #fdf2f8 !important; }
+  .grupo-card-rows.color-5 .grupo-card-row-empty { background: #fef2f2 !important; }
+  .grupo-card-rows.color-6 .grupo-card-row-empty { background: #f0fdfa !important; }
+  .grupo-card-rows.color-7 .grupo-card-row-empty { background: #fefce8 !important; }
+}

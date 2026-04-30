@@ -63,6 +63,10 @@
         <span class="topbar-sub">Gestión de cobros</span>
       </div>
       <div class="topbar-actions">
+        <button class="btn-cargo-manual" id="btnCargo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Cargo adelantado
+        </button>
         <a href="dashboard.html" class="btn-dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           Dashboard
@@ -178,6 +182,68 @@
           <span class="btn-loader" style="display:none">
             <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CARGO ADELANTADO -->
+  <div class="modal-overlay" id="modalCargo" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Cargo adelantado</h3>
+          <p class="modal-sub">El cron omitirá al alumno ese mes automáticamente</p>
+        </div>
+        <button class="btn-cerrar-modal" id="modalCargoCerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Alumno</label>
+        <div class="buscar-alumno-wrap">
+          <input type="text" id="cargoBuscar" class="form-input" placeholder="Buscar por nombre o folio..." autocomplete="off"/>
+          <div id="cargoResultados" class="buscar-resultados" style="display:none"></div>
+        </div>
+        <div id="cargoAlumnoChip" class="alumno-chip" style="display:none"></div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Mes a registrar</label>
+          <select id="cargoMes" class="form-input form-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto ($)</label>
+          <input type="number" id="cargoMonto" class="form-input" min="0" step="0.01" placeholder="0"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <div class="estado-btns">
+          <button class="btn-estado-cargo" data-val="pendiente"><span class="dot rojo"></span>Pendiente</button>
+          <button class="btn-estado-cargo" data-val="pagado"><span class="dot verde"></span>Pagado</button>
+        </div>
+      </div>
+
+      <div class="form-group" id="cargoMetodoWrap" style="display:none">
+        <label class="form-label">Método de pago</label>
+        <select id="cargoMetodo" class="form-input form-select">
+          <option value="">— Selecciona —</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+        </select>
+      </div>
+
+      <div id="cargoError" class="form-error" style="display:none"></div>
+
+      <div class="modal-actions">
+        <button class="btn-cancelar" id="modalCargoCancelar">Cancelar</button>
+        <button class="btn-guardar" id="modalCargoGuardar">
+          <span class="btn-text">Guardar cargo</span>
+          <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
         </button>
       </div>
     </div>

@@ -119,6 +119,25 @@
 .spinner { width: 16px; height: 16px; animation: girar 0.8s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
 
+/* Búsqueda de alumno en modal cargo */
+.buscar-alumno-wrap { position: relative; }
+#cargoBuscar { padding: 0.55rem 1rem; font-size: 0.85rem; }
+.buscar-resultados { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: rgba(15,31,110,0.98); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 14px; overflow: hidden; z-index: 300; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.buscar-resultado-item { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.buscar-resultado-item:last-child { border-bottom: none; }
+.buscar-resultado-item:hover { background: rgba(255,255,255,0.1); }
+.buscar-resultado-item strong { font-size: 0.85rem; color: #fff; }
+.buscar-resultado-item span { font-size: 0.72rem; color: rgba(255,255,255,0.45); }
+.alumno-chip { display: flex; align-items: center; justify-content: space-between; margin-top: 0.4rem; padding: 0.5rem 0.9rem; background: rgba(37,99,235,0.2); border: 1.5px solid rgba(37,99,235,0.4); border-radius: 999px; }
+.alumno-chip span { font-size: 0.85rem; font-weight: 600; color: #93c5fd; }
+.chip-quitar { background: transparent; border: none; color: rgba(255,255,255,0.5); font-size: 1.1rem; cursor: pointer; padding: 0 0 0 0.5rem; line-height: 1; }
+.chip-quitar:hover { color: #fff; }
+
+/* Botones estado en modal cargo */
+.btn-estado-cargo { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 999px; color: rgba(255,255,255,0.7); font-size: 0.82rem; font-weight: 500; cursor: pointer; font-family: var(--font-main); transition: all 0.18s; }
+.btn-estado-cargo:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.btn-estado-cargo.activo { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.18); color: #fff; font-weight: 700; }
+
 @media (max-width: 700px) {
   .form-grid { grid-template-columns: 1fr; }
   .tabla th:nth-child(3), .tabla td:nth-child(3) { display: none; }

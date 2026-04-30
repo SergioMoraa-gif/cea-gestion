@@ -121,143 +121,172 @@ async function recargarCalendario() {
 }
 
 function renderCalendario() {
-  const head = document.getElementById('calHead')
-  const body = document.getElementById('calBody')
+  const container = document.getElementById('calendarioScroll')
+  container.innerHTML = ''
 
-  head.innerHTML = `<tr>
-    <th>Hora</th>
-    ${DIAS.map((d, i) => `<th class="dia-activo">${DIAS_LABEL[i]}</th>`).join('')}
-  </tr>`
-  body.innerHTML = ''
-
+  // Mapa: "dia_HH:MM" → [horarios]
   const mapa = {}
   horariosData.forEach(h => {
-    const key = `${h.dia}_${h.hora_inicio}`
+    const key = `${h.dia}_${h.hora_inicio.slice(0, 5)}`
     if (!mapa[key]) mapa[key] = []
     mapa[key].push(h)
   })
 
-  const maestroOcupado = {}
+  // Slots ocupados por maestro: "dia_HH:MM_mId"
+  const ocupado = new Set()
   horariosData.forEach(h => {
-    const mId  = h.maestro_id || h.id_maestro
-    const dur  = parseInt(h.duracion) || 30
+    const mId = h.maestro_id || h.id_maestro
+    const dur = parseInt(h.duracion) || 30
     const [hh, mm] = h.hora_inicio.split(':').map(Number)
-    const startMin = hh * 60 + mm
+    const startMin  = hh * 60 + mm
     for (let delta = 0; delta < dur; delta += 30) {
-      const tot = startMin + delta
-      const key = `${h.dia}_${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}:00`
-      if (!maestroOcupado[key]) maestroOcupado[key] = new Set()
-      maestroOcupado[key].add(mId)
+      const tot   = startMin + delta
+      const tHora = `${String(Math.floor(tot / 60)).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`
+      ocupado.add(`${h.dia}_${tHora}_${mId}`)
     }
   })
 
+  // Slots ocupados del alumno a asignar: "dia_HH:MM"
   const estudianteOcupado = new Set()
   horariosEstudiante.forEach(h => {
     const dur = parseInt(h.duracion) || 30
     const [hh, mm] = h.hora_inicio.split(':').map(Number)
-    const startMin = hh * 60 + mm
+    const startMin  = hh * 60 + mm
     for (let delta = 0; delta < dur; delta += 30) {
       const tot = startMin + delta
-      estudianteOcupado.add(`${h.dia}_${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}:00`)
+      estudianteOcupado.add(`${h.dia}_${String(Math.floor(tot / 60)).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`)
     }
   })
 
-  BLOQUES.forEach(hora => {
-    const tr  = document.createElement('tr')
-    const tdH = document.createElement('td')
-    tdH.className = 'td-hora'; tdH.textContent = hora
-    tr.appendChild(tdH)
+  DIAS.forEach((dia, diaIdx) => {
+    const maestrosDelDia = maestrosData.filter(m => {
+      const diasT = m.dias_trabajo
+      if (!diasT || !Array.isArray(diasT) || diasT.length === 0) return true
+      return diasT.includes(dia)
+    })
+    if (maestrosDelDia.length === 0) return
 
-    DIAS.forEach(dia => {
-      const keyFull   = `${dia}_${hora}:00`
-      const td        = document.createElement('td')
-      td.className    = 'td-bloque'
-      const bloqsAqui = mapa[keyFull] || []
+    const seccion = document.createElement('div')
+    seccion.className = 'dia-seccion'
 
-      const porMaestro = {}
-      bloqsAqui.forEach(b => {
-        const mId = b.maestro_id || b.id_maestro
-        if (!porMaestro[mId]) porMaestro[mId] = []
-        porMaestro[mId].push(b)
-      })
+    const titulo = document.createElement('div')
+    titulo.className   = 'dia-titulo'
+    titulo.textContent = DIAS_LABEL[diaIdx]
+    seccion.appendChild(titulo)
 
-      const maestrosConBloqueAqui = new Set(Object.keys(porMaestro).map(Number))
-      const maestrosEnCont = [...(maestroOcupado[keyFull] || [])].filter(
-        mId => !maestrosConBloqueAqui.has(mId)
-      )
+    const scroll = document.createElement('div')
+    scroll.className = 'dia-tabla-scroll'
 
-      // Bloques que inician aquí
-      Object.entries(porMaestro).forEach(([mIdStr, mBloqs]) => {
-        const mId    = parseInt(mIdStr)
-        const maestro = maestrosData.find(m => m.id_maestro === mId)
-        const esGrupal = mBloqs.some(b => b.tipo === 'grupal' || b.tipo === 'matros')
-        const esMatros = mBloqs.some(b => b.tipo === 'matros')
-        const dur      = Math.max(...mBloqs.map(b => parseInt(b.duracion) || 30))
-        const albLabel = mBloqs[0].alberca ? ` · A${mBloqs[0].alberca}` : ''
+    const tabla = document.createElement('table')
+    tabla.className = 'calendario-dia'
 
-        const div = document.createElement('div')
-        div.className = `bloque-global ${colorMap[mId] || 'color-0'}${esGrupal ? ' bloque-grupal' : ''}`
+    // Encabezado
+    const thead = document.createElement('thead')
+    const trH   = document.createElement('tr')
+    const thHora = document.createElement('th')
+    thHora.className   = 'th-hora'
+    thHora.textContent = 'Hora'
+    trH.appendChild(thHora)
 
-        if (esGrupal) {
-          const tipoLabel = esMatros ? 'Matros' : 'Grupal'
-          div.innerHTML = `
-            <div class="bg-nombre">${tipoLabel} · ${mBloqs.length} alumno${mBloqs.length !== 1 ? 's' : ''}${albLabel}</div>
-            <div class="bg-info">${maestro ? maestro.nombre : '—'} · ${dur} min</div>`
-
-          if (nuevoEstId && !estudianteOcupado.has(keyFull)) {
-            div.classList.add('bloque-grupal-unirse')
-            div.addEventListener('click', () => abrirModalGrupo(mBloqs[0], dia, hora, mBloqs, mId))
-          } else if (!nuevoEstId) {
-            div.addEventListener('click', () => abrirModalEditar(mBloqs[0], dia, hora, mBloqs))
-          }
-        } else {
-          const est = estudiantesData.find(e =>
-            e.id_estudiante === (mBloqs[0].estudiante_id || mBloqs[0].id_estudiante)
-          )
-          div.innerHTML = `
-            <div class="bg-nombre">${est ? est.nombre : '—'}${albLabel}</div>
-            <div class="bg-info">${maestro ? maestro.nombre : '—'} · ${dur} min</div>`
-
-          if (!nuevoEstId) {
-            div.addEventListener('click', () => abrirModalEditar(mBloqs[0], dia, hora, mBloqs))
-          }
-        }
-
-        td.appendChild(div)
-      })
-
-      // Continuación de bloque 60 min
-      maestrosEnCont.forEach(mId => {
-        const maestro = maestrosData.find(m => m.id_maestro === mId)
-        const cont    = document.createElement('div')
-        cont.className = `bloque-cont ${colorMap[mId] || 'color-0'}`
-        cont.innerHTML = `<div class="bg-info">↑ ${maestro ? maestro.nombre : '—'}</div>`
-        td.appendChild(cont)
-      })
-
-      // Slot libre (modo asignación)
-      if (nuevoEstId && !estudianteOcupado.has(keyFull)) {
-        const ocupadosAqui   = maestroOcupado[keyFull] || new Set()
-        const maestrosLibres = maestrosData.filter(m => !ocupadosAqui.has(m.id_maestro))
-        if (maestrosLibres.length > 0) {
-          const btnLibre = document.createElement('div')
-          btnLibre.className   = 'bloque-libre'
-          btnLibre.title       = `${maestrosLibres.length} maestro${maestrosLibres.length !== 1 ? 's' : ''} disponible${maestrosLibres.length !== 1 ? 's' : ''}`
-          btnLibre.textContent = '+'
-          btnLibre.addEventListener('click', () => abrirModalAsignar(dia, hora, maestrosLibres))
-          td.appendChild(btnLibre)
-        }
-      } else if (nuevoEstId && estudianteOcupado.has(keyFull) && bloqsAqui.length === 0 && maestrosEnCont.length === 0) {
-        const conf = document.createElement('div')
-        conf.className = 'bloque-conflicto-est'
-        conf.title     = `${estudianteAsignar ? estudianteAsignar.nombre : 'El alumno'} ya tiene clase a esta hora`
-        td.appendChild(conf)
-      }
-
-      tr.appendChild(td)
+    maestrosDelDia.forEach(m => {
+      const th     = document.createElement('th')
+      th.className = 'th-maestro'
+      th.title     = m.nombre
+      th.innerHTML = `<span class="th-dot ${colorMap[m.id_maestro] || 'color-0'}"></span><span class="th-nombre">${m.nombre.split(' ')[0]}</span>`
+      trH.appendChild(th)
     })
 
-    body.appendChild(tr)
+    thead.appendChild(trH)
+    tabla.appendChild(thead)
+
+    // Cuerpo
+    const tbody = document.createElement('tbody')
+
+    BLOQUES.forEach(hora => {
+      const tr  = document.createElement('tr')
+      const tdH = document.createElement('td')
+      tdH.className   = 'td-hora'
+      tdH.textContent = hora
+      tr.appendChild(tdH)
+
+      maestrosDelDia.forEach(m => {
+        const td = document.createElement('td')
+        td.className = 'td-bloque'
+
+        const bloqsMaestro = (mapa[`${dia}_${hora}`] || []).filter(b =>
+          (b.maestro_id || b.id_maestro) === m.id_maestro
+        )
+        const esCont = bloqsMaestro.length === 0 && ocupado.has(`${dia}_${hora}_${m.id_maestro}`)
+
+        if (bloqsMaestro.length > 0) {
+          const esGrupal   = bloqsMaestro.some(b => b.tipo === 'grupal' || b.tipo === 'matros')
+          const esMatros   = bloqsMaestro.some(b => b.tipo === 'matros')
+          const dur        = Math.max(...bloqsMaestro.map(b => parseInt(b.duracion) || 30))
+          const alb        = bloqsMaestro[0].alberca ? ` · A${bloqsMaestro[0].alberca}` : ''
+          const colorClass = colorMap[m.id_maestro] || 'color-0'
+
+          const div = document.createElement('div')
+          div.className = `celda-clase ${colorClass}${esGrupal ? ' celda-grupal' : ''}`
+
+          if (esGrupal) {
+            const tipoLabel = esMatros ? 'MATROS' : 'GRUPAL'
+            const alumnos   = bloqsMaestro.map(b => {
+              const est = estudiantesData.find(e => e.id_estudiante === (b.estudiante_id || b.id_estudiante))
+              return est ? est.nombre : '—'
+            })
+            div.innerHTML = `
+              <div class="celda-tipo-label">${tipoLabel} · ${dur}min${alb}</div>
+              ${alumnos.map(n => `<div class="celda-alumno-item">${n}</div>`).join('')}`
+
+            if (nuevoEstId && !estudianteOcupado.has(`${dia}_${hora}`)) {
+              div.classList.add('celda-grupal-unirse')
+              div.addEventListener('click', () => abrirModalGrupo(bloqsMaestro[0], dia, hora, bloqsMaestro, m.id_maestro))
+            } else if (!nuevoEstId) {
+              div.addEventListener('click', () => abrirModalEditar(bloqsMaestro[0], dia, hora, bloqsMaestro))
+            }
+          } else {
+            const est = estudiantesData.find(e => e.id_estudiante === (bloqsMaestro[0].estudiante_id || bloqsMaestro[0].id_estudiante))
+            div.innerHTML = `
+              <div class="celda-alumno-nombre">${est ? est.nombre : '—'}</div>
+              <div class="celda-info-dur">${dur}min${alb}</div>`
+
+            if (!nuevoEstId) {
+              div.addEventListener('click', () => abrirModalEditar(bloqsMaestro[0], dia, hora, bloqsMaestro))
+            }
+          }
+
+          td.appendChild(div)
+
+        } else if (esCont) {
+          const cont = document.createElement('div')
+          cont.className = `celda-cont ${colorMap[m.id_maestro] || 'color-0'}`
+          td.appendChild(cont)
+
+        } else if (nuevoEstId && !estudianteOcupado.has(`${dia}_${hora}`)) {
+          const btnLibre = document.createElement('div')
+          btnLibre.className   = 'bloque-libre'
+          btnLibre.textContent = '+'
+          btnLibre.title       = `${m.nombre} disponible`
+          btnLibre.addEventListener('click', () => abrirModalAsignar(dia, hora, [m]))
+          td.appendChild(btnLibre)
+
+        } else if (nuevoEstId && estudianteOcupado.has(`${dia}_${hora}`)) {
+          const conf = document.createElement('div')
+          conf.className = 'bloque-conflicto-est'
+          conf.title     = `${estudianteAsignar ? estudianteAsignar.nombre : 'El alumno'} ya tiene clase a esta hora`
+          td.appendChild(conf)
+        }
+
+        tr.appendChild(td)
+      })
+
+      tbody.appendChild(tr)
+    })
+
+    tabla.appendChild(tbody)
+    scroll.appendChild(tabla)
+    seccion.appendChild(scroll)
+    container.appendChild(seccion)
   })
 
   document.getElementById('loadingCal').style.display       = 'none'

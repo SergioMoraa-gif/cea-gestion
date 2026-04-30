@@ -158,10 +158,19 @@ async function crear(req, res) {
     if (existe && existe.length > 0)
       return res.json({ message: 'El cargo ya existe.', existe: true })
 
+    const { estado, metodo, fecha_pago } = req.body
+    const registro = {
+      id_estudiante,
+      mes,
+      monto:  monto || 0,
+      estado: estado || 'pendiente',
+      tipo:   'mensual'
+    }
+    if (metodo)    registro.metodo     = metodo
+    if (fecha_pago) registro.fecha_pago = fecha_pago
+
     const { data, error } = await supabase
-      .from('Pagos')
-      .insert([{ id_estudiante, mes, monto: monto || 0, estado: 'pendiente', tipo: 'mensual' }])
-      .select().single()
+      .from('Pagos').insert([registro]).select().single()
     if (error) return res.status(500).json({ message: error.message })
     res.status(201).json({ message: 'Cargo creado.', pago: data })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }

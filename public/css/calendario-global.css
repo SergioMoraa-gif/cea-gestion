@@ -58,38 +58,46 @@
 
 /* Calendario */
 .loading-msg { text-align: center; color: rgba(255,255,255,0.55); font-size: 0.9rem; padding: 3rem; }
-.calendario-scroll { overflow-x: auto; border-radius: 18px; }
-.calendario { width: 100%; border-collapse: collapse; background: rgba(20,45,130,0.4); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 18px; overflow: hidden; }
+.calendario-scroll { display: flex; flex-direction: column; gap: 2rem; }
 
-.calendario thead th { padding: 0.8rem 0.4rem; text-align: center; font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(10,25,90,0.3); }
-.calendario thead th:first-child { text-align: left; padding-left: 1rem; min-width: 58px; }
-.calendario thead th.dia-activo { color: rgba(255,255,255,0.85); }
+/* Sección por día */
+.dia-seccion { display: flex; flex-direction: column; gap: 0.4rem; }
+.dia-titulo { font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; padding: 0 0.3rem; }
+.dia-tabla-scroll { overflow-x: auto; border-radius: 14px; }
+.calendario-dia { width: 100%; border-collapse: collapse; background: rgba(20,45,130,0.4); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 14px; overflow: hidden; }
 
-.calendario tbody tr:hover td { background: rgba(255,255,255,0.015); }
-.td-hora { padding: 0 0.7rem; font-size: 0.68rem; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.06); vertical-align: top; padding-top: 5px; }
-.td-bloque { padding: 2px 3px; border: 1px solid rgba(255,255,255,0.04); min-width: 115px; min-height: 36px; vertical-align: top; }
+/* Cabecera */
+.th-hora { padding: 0.65rem 0.7rem; text-align: left; font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(10,25,90,0.3); min-width: 55px; width: 55px; white-space: nowrap; }
+.th-maestro { padding: 0.65rem 0.6rem; text-align: center; font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(10,25,90,0.3); min-width: 120px; white-space: nowrap; }
+.th-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; flex-shrink: 0; }
+.th-nombre { vertical-align: middle; }
 
-/* Bloque global: mini tarjeta con color de maestro */
-.bloque-global { width: 100%; border-radius: 5px; padding: 3px 5px; margin-bottom: 2px; cursor: pointer; display: flex; flex-direction: column; justify-content: center; transition: opacity 0.15s, transform 0.1s; min-height: 30px; }
-.bloque-global:hover { opacity: 0.82; transform: scale(1.01); }
-.bg-nombre { font-size: 0.67rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bg-info   { font-size: 0.57rem; opacity: 0.72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Filas */
+.calendario-dia tbody tr:hover td { background: rgba(255,255,255,0.015); }
+.td-hora { padding: 3px 0.7rem 0; font-size: 0.68rem; font-weight: 600; color: rgba(255,255,255,0.35); white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+.td-bloque { padding: 2px 3px; border: 1px solid rgba(255,255,255,0.04); min-width: 120px; min-height: 34px; vertical-align: top; }
 
-/* Bloque grupal: dashed border para distinguirlo */
-.bloque-global.bloque-grupal { border: 1.5px dashed rgba(255,255,255,0.4); }
-.bloque-global.bloque-grupal-unirse { border: 1.5px dashed rgba(255,255,255,0.7) !important; cursor: pointer; }
-.bloque-global.bloque-grupal-unirse:hover { opacity: 1; border-color: rgba(255,255,255,1) !important; }
+/* Bloque de clase */
+.celda-clase { width: 100%; border-radius: 5px; padding: 4px 6px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; transition: opacity 0.15s, transform 0.1s; min-height: 30px; box-sizing: border-box; }
+.celda-clase:hover { opacity: 0.82; transform: scale(1.01); }
+.celda-grupal { border: 1.5px dashed rgba(255,255,255,0.4); }
+.celda-grupal-unirse { border: 1.5px dashed rgba(255,255,255,0.7) !important; cursor: pointer; }
+.celda-grupal-unirse:hover { opacity: 1 !important; border-color: rgba(255,255,255,1) !important; }
 
-/* Continuación de bloque de 60 min: barra delgada */
-.bloque-cont { width: 100%; border-radius: 4px; padding: 1px 5px; margin-bottom: 2px; min-height: 18px; display: flex; align-items: center; opacity: 0.5; }
-.bloque-cont .bg-info { font-size: 0.55rem; }
+.celda-tipo-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; white-space: nowrap; }
+.celda-alumno-item { font-size: 0.63rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.celda-alumno-nombre { font-size: 0.68rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.celda-info-dur { font-size: 0.58rem; opacity: 0.7; }
+
+/* Continuación de bloque 60 min */
+.celda-cont { width: 100%; border-radius: 4px; min-height: 18px; opacity: 0.4; }
 
 /* Slot libre (modo asignación) */
-.bloque-libre { width: 100%; min-height: 30px; border-radius: 5px; border: 1.5px dashed rgba(37,99,235,0.5); background: rgba(37,99,235,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, border-color 0.2s; color: rgba(37,99,235,0.7); font-size: 1rem; font-weight: 700; margin-top: 2px; }
+.bloque-libre { width: 100%; min-height: 30px; border-radius: 5px; border: 1.5px dashed rgba(37,99,235,0.5); background: rgba(37,99,235,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, border-color 0.2s; color: rgba(37,99,235,0.7); font-size: 1rem; font-weight: 700; }
 .bloque-libre:hover { background: rgba(37,99,235,0.22); border-color: rgba(37,99,235,0.9); color: #60a5fa; }
 
 /* Conflicto del alumno (ya tiene clase a esa hora) */
-.bloque-conflicto-est { width: 100%; min-height: 30px; border-radius: 5px; background: rgba(220,38,38,0.1); border: 1.5px solid rgba(220,38,38,0.3); margin-top: 2px; }
+.bloque-conflicto-est { width: 100%; min-height: 30px; border-radius: 5px; background: rgba(220,38,38,0.1); border: 1.5px solid rgba(220,38,38,0.3); }
 
 /* Colores por maestro */
 .color-0 { background: rgba(37,99,235,0.55);   color: #dbeafe; }
@@ -185,7 +193,7 @@
 @keyframes girar { to { transform: rotate(360deg); } }
 
 @media (max-width: 680px) {
-  .td-bloque { min-width: 80px; }
+  .th-maestro, .td-bloque { min-width: 90px; }
 }
 
 /* ─── Encabezado de impresión (oculto en pantalla) ─── */
@@ -241,56 +249,78 @@
     white-space: nowrap;
   }
 
-  /* Calendario */
-  .calendario-scroll { overflow: visible; border-radius: 0; border: none; }
-  .calendario {
+  /* Cada día en su propia hoja */
+  .calendario-scroll { display: block !important; }
+  .dia-seccion { display: block; page-break-after: always; break-after: page; margin-bottom: 0; }
+  .dia-seccion:last-child { page-break-after: avoid; break-after: avoid; }
+
+  /* Calendario por día */
+  .dia-titulo {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #1e3a8a !important;
+    letter-spacing: 0.12em;
+    padding: 0 0 3px;
+    border-bottom: 2px solid #1e3a8a;
+    margin-bottom: 2px;
+  }
+  .dia-tabla-scroll { overflow: visible; border-radius: 0; }
+  .calendario-dia {
     width: 100%;
     border-collapse: collapse;
     background: #fff !important;
-    border: 1.5px solid #cbd5e1 !important;
+    border: 1px solid #cbd5e1 !important;
     border-radius: 0 !important;
     backdrop-filter: none !important;
+    page-break-inside: avoid;
   }
 
-  .calendario thead th {
+  .th-hora {
     background: #1e3a8a !important;
     color: #fff !important;
-    font-size: 0.62rem;
-    font-weight: 700;
-    padding: 5px 4px;
+    font-size: 0.58rem;
+    padding: 4px 5px;
     border: 1px solid #1e40af;
-    letter-spacing: 0.06em;
   }
-  .calendario thead th:first-child { color: #fff !important; }
+  .th-maestro {
+    background: #1e3a8a !important;
+    color: #fff !important;
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 4px 4px;
+    border: 1px solid #1e40af;
+    min-width: 80px;
+  }
+  .th-dot { display: none; }
 
   .td-hora {
-    font-size: 0.58rem;
+    font-size: 0.55rem;
     color: #475569 !important;
-    padding: 2px 5px;
-    border-right: 1px solid #e2e8f0;
+    padding: 2px 4px;
+    border: 1px solid #e2e8f0;
     background: #f8fafc;
     vertical-align: top;
-    padding-top: 3px;
   }
   .td-bloque {
     padding: 1px 2px;
     border: 1px solid #e2e8f0;
-    min-width: 90px;
+    min-width: 80px;
     vertical-align: top;
     background: #fff;
   }
-  .calendario tbody tr:hover td { background: transparent; }
+  .calendario-dia tbody tr:hover td { background: transparent; }
 
   /* Bloques — colores sólidos para impresión */
-  .bloque-global {
+  .celda-clase {
     border-radius: 3px;
     padding: 2px 4px;
-    margin-bottom: 1px;
-    min-height: 22px;
+    min-height: 20px;
     page-break-inside: avoid;
   }
-  .bloque-global .bg-nombre { font-size: 0.58rem; font-weight: 700; color: #fff; }
-  .bloque-global .bg-info   { font-size: 0.52rem; color: rgba(255,255,255,0.85); }
+  .celda-tipo-label { font-size: 0.52rem; color: #fff; }
+  .celda-alumno-item { font-size: 0.52rem; color: #fff; }
+  .celda-alumno-nombre { font-size: 0.55rem; color: #fff; }
+  .celda-info-dur { font-size: 0.5rem; color: rgba(255,255,255,0.85); }
 
   .color-0 { background: #1d4ed8 !important; color: #fff !important; }
   .color-1 { background: #059669 !important; color: #fff !important; }
@@ -301,6 +331,6 @@
   .color-6 { background: #0d9488 !important; color: #fff !important; }
   .color-7 { background: #ca8a04 !important; color: #fff !important; }
 
-  .bloque-cont { opacity: 0.4; }
+  .celda-cont { opacity: 0.4; }
   .bloque-libre, .bloque-conflicto-est { display: none !important; }
 }

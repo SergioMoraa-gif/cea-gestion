@@ -299,6 +299,10 @@
   grid-column: span 2;
 }
 
+.action-card-solo {
+  grid-column: 3 / span 2;
+}
+
 
 .action-card {
   background: var(--glass-bg);
