@@ -199,6 +199,13 @@
   font-weight: 400;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .topbar-user {
   font-size: 0.8rem;
   color: rgba(255,255,255,0.7);
@@ -211,6 +218,53 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ── Botón de ayuda ── */
+.btn-ayuda-wrap {
+  position: relative;
+}
+
+.btn-ayuda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  color: rgba(255,255,255,0.7);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: default;
+  font-family: var(--font-main);
+  flex-shrink: 0;
+}
+
+.ayuda-tooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 260px;
+  background: rgba(15, 30, 80, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  color: rgba(255,255,255,0.88);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  font-weight: 400;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  z-index: 100;
+}
+
+.btn-ayuda-wrap:hover .ayuda-tooltip {
+  opacity: 1;
 }
 
 /* ================================
