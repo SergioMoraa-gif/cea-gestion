@@ -79,6 +79,7 @@ async function iniciar() {
         horariosEstudiante = (await resH.json()).horarios || []
       } catch { horariosEstudiante = [] }
       document.getElementById('bannerNuevo').style.display = 'flex'
+      document.getElementById('btnImprimir').style.display = 'none'
       document.getElementById('bannerTexto').innerHTML =
         `Asignando horario a <strong>${estudianteAsignar.nombre}</strong> — Da clic en un bloque libre`
     }
