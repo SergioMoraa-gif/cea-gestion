@@ -429,8 +429,18 @@ function abrirModalGrupo(horario, dia, hora, todosLosBloques, maestroId) {
     lista.appendChild(li)
   })
 
+  const yaEstaEnGrupo = nuevoEstId && todosLosBloques.some(b =>
+    (b.estudiante_id || b.id_estudiante) === nuevoEstId
+  )
+
   const accionesDiv = document.getElementById('modalGrupoAcciones')
-  accionesDiv.style.display = (nuevoEstId && estudianteAsignar) ? 'flex' : 'none'
+  accionesDiv.style.display = (nuevoEstId && estudianteAsignar && !yaEstaEnGrupo) ? 'flex' : 'none'
+
+  if (yaEstaEnGrupo) {
+    document.getElementById('modalGrupoCount').textContent =
+      `${total} alumno${total !== 1 ? 's' : ''} en este grupo · El alumno ya está inscrito`
+  }
+
   document.getElementById('modalGrupo').style.display = 'flex'
 }
 

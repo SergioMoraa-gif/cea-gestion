@@ -65,7 +65,11 @@ async function crear(req, res) {
       }])
       .select()
       .single()
-    if (error) return res.status(500).json({ message: error.message })
+    if (error) {
+      if (error.code === '23505' && error.message.includes('folio'))
+        return res.status(409).json({ message: 'El folio ya está en uso. Elige un folio diferente.' })
+      return res.status(500).json({ message: error.message })
+    }
     res.status(201).json({ message: 'Estudiante creado.', estudiante: data })
   } catch (err) {
     res.status(500).json({ message: 'Error interno.' })
@@ -89,7 +93,11 @@ async function actualizar(req, res) {
       .eq('id_estudiante', id)
       .select()
       .single()
-    if (error) return res.status(500).json({ message: error.message })
+    if (error) {
+      if (error.code === '23505' && error.message.includes('folio'))
+        return res.status(409).json({ message: 'El folio ya está en uso. Elige un folio diferente.' })
+      return res.status(500).json({ message: error.message })
+    }
     res.json({ message: 'Estudiante actualizado.', estudiante: data })
   } catch (err) {
     res.status(500).json({ message: 'Error interno.' })

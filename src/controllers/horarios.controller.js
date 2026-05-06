@@ -97,7 +97,7 @@ async function crear(req, res) {
     // Traer todos los bloques del mismo día para validar conflictos
     const { data: existentes } = await supabase
       .from('HorariosAlumnos')
-      .select('id_horario, id_maestro, hora_inicio, duracion, tipo, alberca')
+      .select('id_horario, id_maestro, id_estudiante, hora_inicio, duracion, tipo, alberca')
       .eq('dia', dia)
 
     const esGrupalOMatros = (t) => t === 'grupal' || t === 'matros'
@@ -112,7 +112,13 @@ async function crear(req, res) {
 
         // Conflicto con el mismo maestro — excepción: unirse al mismo grupo (grupal o matros)
         if (parseInt(ex.id_maestro) === parseInt(maestId)) {
-          if (esGrupalOMatros(tipoBloque) && tipoBloque === ex.tipo && exStart === newStart && ex.alberca === parseInt(alberca)) continue
+          if (esGrupalOMatros(tipoBloque) && tipoBloque === ex.tipo && exStart === newStart && ex.alberca === parseInt(alberca)) {
+            // Verificar que el estudiante no esté ya en ese grupo
+            if (parseInt(ex.id_estudiante) === parseInt(estId)) {
+              return res.status(409).json({ message: 'El alumno ya está inscrito en ese grupo.' })
+            }
+            continue
+          }
           return res.status(409).json({ message: 'El maestro ya tiene una clase en ese horario.' })
         }
 
