@@ -41,8 +41,6 @@
 .btn-ayuda { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; color: rgba(255,255,255,0.7); font-size: 0.9rem; font-weight: 700; cursor: default; font-family: var(--font-main); flex-shrink: 0; }
 .ayuda-tooltip { position: absolute; top: calc(100% + 10px); right: 0; width: 270px; background: rgba(15,30,80,0.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 0.85rem 1rem; color: rgba(255,255,255,0.88); font-size: 0.8rem; line-height: 1.55; font-weight: 400; opacity: 0; pointer-events: none; transition: opacity 0.35s ease; z-index: 100; }
 .btn-ayuda-wrap:hover .ayuda-tooltip { opacity: 1; }
-.btn-imprimir { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; color: #fff; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s; font-family: var(--font-main); white-space: nowrap; }
-.btn-imprimir:hover { background: rgba(255,255,255,0.25); }
 .btn-dashboard { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background 0.2s; white-space: nowrap; }
 .btn-dashboard:hover { background: rgba(255,255,255,0.22); }
 .btn-maestros { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background 0.2s; white-space: nowrap; }
@@ -67,7 +65,11 @@
 
 /* Sección por día */
 .dia-seccion { display: flex; flex-direction: column; gap: 0.4rem; }
-.dia-titulo { font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; padding: 0 0.3rem; }
+.dia-titulo-row { display: flex; align-items: center; gap: 0.6rem; padding: 0 0.3rem; }
+.dia-titulo { font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; }
+.btn-imprimir-dia { display: flex; align-items: center; gap: 0.3rem; padding: 0.18rem 0.6rem; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13); border-radius: 999px; color: rgba(255,255,255,0.45); font-size: 0.62rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); transition: background 0.2s, color 0.2s; white-space: nowrap; }
+.btn-imprimir-dia svg { width: 10px; height: 10px; flex-shrink: 0; }
+.btn-imprimir-dia:hover { background: rgba(255,255,255,0.16); color: #fff; }
 .dia-tabla-scroll { overflow-x: auto; border-radius: 14px; }
 .calendario-dia { width: 100%; border-collapse: collapse; background: rgba(20,45,130,0.4); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 14px; overflow: hidden; }
 
@@ -260,14 +262,17 @@
   .dia-seccion:last-child { page-break-after: avoid; break-after: avoid; }
 
   /* Calendario por día */
+  .dia-titulo-row {
+    padding: 0;
+    border-bottom: 2px solid #1e3a8a;
+    margin-bottom: 2px;
+  }
   .dia-titulo {
     font-size: 0.75rem;
     font-weight: 800;
     color: #1e3a8a !important;
     letter-spacing: 0.12em;
     padding: 0 0 3px;
-    border-bottom: 2px solid #1e3a8a;
-    margin-bottom: 2px;
   }
   .dia-tabla-scroll { overflow: visible; border-radius: 0; }
   .calendario-dia {
@@ -338,4 +343,6 @@
 
   .celda-cont { opacity: 0.4; }
   .bloque-libre, .bloque-conflicto-est { display: none !important; }
+  .btn-imprimir-dia { display: none !important; }
+  .ocultar-impresion { display: none !important; }
 }

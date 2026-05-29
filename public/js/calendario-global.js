@@ -48,6 +48,13 @@ let tipoEditando      = 'individual'
 let duracionEditando  = 30
 let albercaEditando   = 1
 
+// Muestra "PRIMER_NOMBRE FOLIO" en las celdas del calendario
+function etiquetaAlumno(est) {
+  if (!est) return '—'
+  const nombre = (est.nombre || '').split(' ')[0]
+  return est.folio ? `${nombre} ${est.folio}` : nombre
+}
+
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 const sidebar         = document.getElementById('sidebar')
 const sidebarBackdrop = document.getElementById('sidebarBackdrop')
@@ -79,7 +86,6 @@ async function iniciar() {
         horariosEstudiante = (await resH.json()).horarios || []
       } catch { horariosEstudiante = [] }
       document.getElementById('bannerNuevo').style.display = 'flex'
-      document.getElementById('btnImprimir').style.display = 'none'
       document.getElementById('bannerTexto').innerHTML =
         `Asignando horario a <strong>${estudianteAsignar.nombre}</strong> — Da clic en un bloque libre`
     }
@@ -168,12 +174,25 @@ function renderCalendario() {
     if (maestrosDelDia.length === 0) return
 
     const seccion = document.createElement('div')
-    seccion.className = 'dia-seccion'
+    seccion.className    = 'dia-seccion'
+    seccion.dataset.dia  = dia
+
+    const tituloRow = document.createElement('div')
+    tituloRow.className  = 'dia-titulo-row'
 
     const titulo = document.createElement('div')
     titulo.className   = 'dia-titulo'
     titulo.textContent = DIAS_LABEL[diaIdx]
-    seccion.appendChild(titulo)
+
+    const btnImprDia = document.createElement('button')
+    btnImprDia.className = 'btn-imprimir-dia'
+    btnImprDia.title     = `Imprimir ${DIAS_LABEL[diaIdx]}`
+    btnImprDia.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir`
+    btnImprDia.addEventListener('click', () => imprimirDia(dia, DIAS_LABEL[diaIdx]))
+
+    tituloRow.appendChild(titulo)
+    tituloRow.appendChild(btnImprDia)
+    seccion.appendChild(tituloRow)
 
     const scroll = document.createElement('div')
     scroll.className = 'dia-tabla-scroll'
@@ -233,7 +252,7 @@ function renderCalendario() {
             const tipoLabel = esMatros ? 'MATROS' : 'GRUPAL'
             const alumnos   = bloqsMaestro.map(b => {
               const est = estudiantesData.find(e => e.id_estudiante === (b.estudiante_id || b.id_estudiante))
-              return est ? est.nombre : '—'
+              return etiquetaAlumno(est)
             })
             div.innerHTML = `
               <div class="celda-tipo-label">${tipoLabel} · ${dur}min${alb}</div>
@@ -248,7 +267,7 @@ function renderCalendario() {
           } else {
             const est = estudiantesData.find(e => e.id_estudiante === (bloqsMaestro[0].estudiante_id || bloqsMaestro[0].id_estudiante))
             div.innerHTML = `
-              <div class="celda-alumno-nombre">${est ? est.nombre : '—'}</div>
+              <div class="celda-alumno-nombre">${etiquetaAlumno(est)}</div>
               <div class="celda-info-dur">${dur}min${alb}</div>`
 
             if (!nuevoEstId) {
@@ -734,13 +753,26 @@ document.getElementById('modalEditarConfirmarAgregar').addEventListener('click',
   } catch (err) { alert('Error de conexión.') }
 })
 
-// ─── Imprimir PDF ─────────────────────────────────────────────────────────────
-document.getElementById('btnImprimir').addEventListener('click', () => {
-  const hoy = new Date()
+// ─── Imprimir día específico ──────────────────────────────────────────────────
+function imprimirDia(dia, diaLabel) {
+  const hoy     = new Date()
   const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
   document.getElementById('printHeaderDate').textContent =
     'Generado el ' + hoy.toLocaleDateString('es-MX', opciones)
+  document.getElementById('printHeaderSub').textContent =
+    diaLabel + ' — Todos los maestros'
+
+  const secciones = document.querySelectorAll('.dia-seccion')
+  secciones.forEach(sec => {
+    if (sec.dataset.dia !== dia) sec.classList.add('ocultar-impresion')
+  })
+
+  const restaurar = () => {
+    secciones.forEach(sec => sec.classList.remove('ocultar-impresion'))
+    window.removeEventListener('afterprint', restaurar)
+  }
+  window.addEventListener('afterprint', restaurar)
   window.print()
-})
+}
 
 iniciar()

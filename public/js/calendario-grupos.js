@@ -45,12 +45,23 @@ document.getElementById('btnLogout').addEventListener('click', () => {
   window.location.href = 'index.html'
 })
 
-// ─── Imprimir ─────────────────────────────────────────────────
-document.getElementById('btnImprimir').addEventListener('click', () => {
+// ─── Imprimir sección específica ──────────────────────────────
+function imprimirSeccion(seccion, label) {
   document.getElementById('printHeaderDate').textContent =
     new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+  const secciones = document.querySelectorAll('.grupos-seccion')
+  secciones.forEach(s => {
+    if (s !== seccion) s.classList.add('ocultar-impresion')
+  })
+
+  const restaurar = () => {
+    secciones.forEach(s => s.classList.remove('ocultar-impresion'))
+    window.removeEventListener('afterprint', restaurar)
+  }
+  window.addEventListener('afterprint', restaurar)
   window.print()
-})
+}
 
 // ─── Carga de datos ───────────────────────────────────────────
 async function iniciar() {
@@ -123,8 +134,16 @@ function renderGrupos() {
     seccion.className = 'grupos-seccion'
 
     const titulo = document.createElement('div')
-    titulo.className   = 'grupos-seccion-titulo'
+    titulo.className = 'grupos-seccion-titulo'
     titulo.textContent = par.label
+
+    const btnImpr = document.createElement('button')
+    btnImpr.className = 'btn-imprimir-seccion'
+    btnImpr.title     = `Imprimir ${par.label}`
+    btnImpr.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir`
+    btnImpr.addEventListener('click', () => imprimirSeccion(seccion, par.label))
+
+    titulo.appendChild(btnImpr)
     seccion.appendChild(titulo)
 
     const grid = document.createElement('div')
@@ -165,12 +184,13 @@ function renderGrupos() {
         row.className = 'grupo-card-row'
 
         const hasPendiente = pendientesSet.has(estId)
-        const nombreText   = est ? est.nombre.toUpperCase() : '?'
+        const nombreText   = est ? est.nombre.split(' ')[0].toUpperCase() : '?'
+        const folioText    = est && est.folio ? est.folio : ''
         const asterisco    = hasPendiente ? ' <span class="grupo-row-asterisco">*</span>' : ''
 
         row.innerHTML =
           `<span class="grupo-row-nombre">${nombreText}</span>` +
-          `<span class="grupo-row-folio">${estId}${asterisco}</span>`
+          `<span class="grupo-row-folio">${folioText}${asterisco}</span>`
 
         rowsDiv.appendChild(row)
         rowCount++
