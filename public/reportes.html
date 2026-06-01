@@ -63,11 +63,17 @@
         <span class="topbar-sub" id="subtituloReporte">Resumen del mes</span>
       </div>
       <div class="topbar-actions">
+        <div class="btn-ayuda-wrap">
+          <button class="btn-ayuda">?</button>
+          <div class="ayuda-tooltip">
+            Aquí ves el resumen de cobros del mes seleccionado. Filtra por maestro o estado de pago. Usa "Imprimir" para generar el reporte en papel con todos los datos del mes.
+          </div>
+        </div>
         <input type="month" id="filtroMes" class="filtro-mes"/>
-        <button class="btn-descargar" id="btnDescargar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Descargar CSV
-        </button>
+        <a href="dashboard.html" class="btn-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
         <button class="btn-imprimir" id="btnImprimir">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Imprimir
