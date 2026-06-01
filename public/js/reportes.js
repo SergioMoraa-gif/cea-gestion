@@ -244,7 +244,7 @@ function badgeEstado(estado) {
 }
 
 // --- Descargar CSV ---
-document.getElementById('btnDescargar').addEventListener('click', () => {
+const _btnDes = document.getElementById('btnDescargar'); _btnDes && _btnDes.addEventListener('click', () => {
   if (listaFiltrada.length === 0) return alert('No hay datos para exportar.')
 
   const mes = document.getElementById('filtroMes').value || 'reporte'
