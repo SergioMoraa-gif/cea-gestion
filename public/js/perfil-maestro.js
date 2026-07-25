@@ -198,20 +198,6 @@ function renderizarCalendario() {
     })
   }
 
-  // Qué albercas están ocupadas globalmente en cada slot (considerando duración)
-  const albercasPorSlot = {}
-  fuenteGlobal.forEach(h => {
-    const dur = parseInt(h.duracion) || 30
-    const [hh, mm] = h.hora_inicio.split(':').map(Number)
-    const startMin = hh * 60 + mm
-    for (let delta = 0; delta < dur; delta += 30) {
-      const tot = startMin + delta
-      const k = `${h.dia}_${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}:00`
-      if (!albercasPorSlot[k]) albercasPorSlot[k] = new Set()
-      albercasPorSlot[k].add(h.alberca || 1)
-    }
-  })
-
   const colorMap = {}
   let ci = 0
   estudiantesData.forEach(e => { colorMap[e.id_estudiante] = COLORES[ci++ % COLORES.length] })
@@ -244,8 +230,6 @@ function renderizarCalendario() {
       td.className  = 'td-bloque'
       const bloqs   = mapa[keyFull] || []  // solo del maestro actual
 
-      const alberOcup     = albercasPorSlot[keyFull] || new Set()
-      const ambasOcupadas = alberOcup.has(1) && alberOcup.has(2)
       const estBloqueado  = estudianteOcupado.has(keyFull)
 
       if (estudianteAsignar) {
@@ -305,7 +289,7 @@ function renderizarCalendario() {
           })
 
           // Alberca libre disponible
-          if (!ambasOcupadas && !estBloqueado) {
+          if (!estBloqueado) {
             const addDiv = document.createElement('div')
             addDiv.className = 'bloque-agregar-libre'
             addDiv.textContent = '+ Alberca libre'

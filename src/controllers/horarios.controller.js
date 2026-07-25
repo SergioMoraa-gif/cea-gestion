@@ -122,11 +122,7 @@ async function crear(req, res) {
           return res.status(409).json({ message: 'El maestro ya tiene una clase en ese horario.' })
         }
 
-        // Conflicto de alberca — excepción: unirse al mismo grupo en la misma alberca y hora exacta
-        if (ex.alberca === parseInt(alberca)) {
-          if (esGrupalOMatros(tipoBloque) && tipoBloque === ex.tipo && exStart === newStart) continue
-          return res.status(409).json({ message: `La alberca ${alberca} ya está ocupada en ese horario.` })
-        }
+        // Una alberca puede tener varios maestros al mismo tiempo — sin límite de ocupación.
       }
     }
 
