@@ -175,7 +175,10 @@
 /* Modal editar — botón eliminar y layout acciones */
 .btn-eliminar-bloque { padding: 0.65rem 1.2rem; background: rgba(220,38,38,0.2); border: 1.5px solid rgba(220,38,38,0.4); border-radius: 999px; color: #fca5a5; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); transition: background 0.2s; }
 .btn-eliminar-bloque:hover { background: rgba(220,38,38,0.4); }
+.btn-perfil-bloque { padding: 0.65rem 1.2rem; background: rgba(37,99,235,0.2); border: 1.5px solid rgba(37,99,235,0.4); border-radius: 999px; color: #93c5fd; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); transition: background 0.2s; }
+.btn-perfil-bloque:hover { background: rgba(37,99,235,0.4); }
 .modal-actions-editar { display: flex; gap: 0.8rem; justify-content: space-between; align-items: center; margin-top: 0.4rem; }
+.modal-actions-izq { display: flex; gap: 0.6rem; }
 
 /* Quitar alumno del grupo */
 .btn-quitar-alumno { padding: 0.28rem 0.65rem; background: rgba(220,38,38,0.2); border: 1px solid rgba(220,38,38,0.35); border-radius: 8px; color: #fca5a5; font-size: 0.7rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); white-space: nowrap; transition: background 0.2s; }

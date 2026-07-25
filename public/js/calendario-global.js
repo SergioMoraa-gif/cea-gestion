@@ -44,6 +44,7 @@ let grupoHora       = null
 // Modal editar bloque
 let bloqueEditando    = null
 let todosBloquesGrupo = []
+let estudianteEnModalEditar = null
 let tipoEditando      = 'individual'
 let duracionEditando  = 30
 let albercaEditando   = 1
@@ -250,13 +251,8 @@ function renderCalendario() {
 
           if (esGrupal) {
             const tipoLabel = esMatros ? 'MATROS' : 'GRUPAL'
-            const alumnos   = bloqsMaestro.map(b => {
-              const est = estudiantesData.find(e => e.id_estudiante === (b.estudiante_id || b.id_estudiante))
-              return etiquetaAlumno(est)
-            })
             div.innerHTML = `
-              <div class="celda-tipo-label">${tipoLabel} · ${dur}min${alb}</div>
-              ${alumnos.map(n => `<div class="celda-alumno-item">${n}</div>`).join('')}`
+              <div class="celda-tipo-label">${tipoLabel} · ${dur}min${alb}</div>`
 
             if (nuevoEstId && !estudianteOcupado.has(`${dia}_${hora}`)) {
               div.classList.add('celda-grupal-unirse')
@@ -553,11 +549,15 @@ function abrirModalEditar(bloque, dia, hora, bloqs) {
     document.getElementById('modalEditarSecIndividual').style.display = 'none'
     document.getElementById('modalEditarSelectorWrap').style.display  = 'none'
     renderizarAlumnosEditar()
+    estudianteEnModalEditar = null
+    document.getElementById('modalEditarPerfil').style.display = 'none'
   } else {
     document.getElementById('modalEditarSecAlumnos').style.display    = 'none'
     document.getElementById('modalEditarSecIndividual').style.display = 'block'
     const est = estudiantesData.find(e => e.id_estudiante === (bloque.estudiante_id || bloque.id_estudiante))
     document.getElementById('modalEditarAlumnoNombre').textContent = est ? est.nombre : '—'
+    estudianteEnModalEditar = bloque.estudiante_id || bloque.id_estudiante
+    document.getElementById('modalEditarPerfil').style.display = 'inline-flex'
   }
 
   document.getElementById('modalEditar').style.display = 'flex'
@@ -633,6 +633,11 @@ document.querySelectorAll('#modalEditar .btn-alb-ed').forEach(b =>
 
 document.getElementById('modalEditarCerrar').addEventListener('click', () => {
   document.getElementById('modalEditar').style.display = 'none'
+})
+
+document.getElementById('modalEditarPerfil').addEventListener('click', () => {
+  if (!estudianteEnModalEditar) return
+  window.location.href = `perfil-estudiante.html?id=${estudianteEnModalEditar}`
 })
 
 // Guardar cambios
@@ -746,10 +751,7 @@ document.getElementById('modalEditarConfirmarAgregar').addEventListener('click',
     })
     const data = await res.json()
     if (!res.ok) { alert(data.message || 'Error al agregar.'); return }
-    todosBloquesGrupo.push({ ...data.horario, estudiante_id: estId })
-    document.getElementById('modalEditarSelectorWrap').style.display = 'none'
-    renderizarAlumnosEditar()
-    recargarCalendario()
+    window.location.href = `perfil-estudiante.html?id=${estId}&nuevaClase=true`
   } catch (err) { alert('Error de conexión.') }
 })
 
