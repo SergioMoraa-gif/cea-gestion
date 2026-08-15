@@ -21,6 +21,9 @@ for (let h = 9; h <= 19; h++) {
 }
 BLOQUES.push('20:00')
 
+// De lunes a viernes no hay clases de 9:00 a 13:00 → se ocultan esas filas del calendario
+const BLOQUES_LV = BLOQUES.filter(h => h >= '13:00')
+
 let maestrosData       = []
 let estudiantesData    = []
 let horariosData       = []
@@ -48,6 +51,9 @@ let estudianteEnModalEditar = null
 let tipoEditando      = 'individual'
 let duracionEditando  = 30
 let albercaEditando   = 1
+
+// Arrastrar y soltar para mover un bloque de horario
+let bloqueArrastrado = null
 
 // Muestra "PRIMER_NOMBRE FOLIO" en las celdas del calendario
 function etiquetaAlumno(est) {
@@ -223,7 +229,9 @@ function renderCalendario() {
     // Cuerpo
     const tbody = document.createElement('tbody')
 
-    BLOQUES.forEach(hora => {
+    const bloquesDia = dia === 'sabado' ? BLOQUES : BLOQUES_LV
+
+    bloquesDia.forEach(hora => {
       const tr  = document.createElement('tr')
       const tdH = document.createElement('td')
       tdH.className   = 'td-hora'
@@ -271,6 +279,13 @@ function renderCalendario() {
             }
           }
 
+          // Arrastrar para mover el bloque (fuera del modo "asignar a alumno")
+          if (!nuevoEstId) {
+            div.draggable = true
+            div.addEventListener('dragstart', (ev) => iniciarArrastre(ev, div, bloqsMaestro, dia, hora, m.id_maestro))
+            div.addEventListener('dragend',   ()   => finalizarArrastre(div))
+          }
+
           td.appendChild(div)
 
         } else if (esCont) {
@@ -278,12 +293,29 @@ function renderCalendario() {
           cont.className = `celda-cont ${colorMap[m.id_maestro] || 'color-0'}`
           td.appendChild(cont)
 
-        } else if (nuevoEstId && !estudianteOcupado.has(`${dia}_${hora}`)) {
+        } else if (!estudianteOcupado.has(`${dia}_${hora}`)) {
+          // Celda vacía: siempre se puede asignar una clase (con o sin alumno preseleccionado)
           const btnLibre = document.createElement('div')
           btnLibre.className   = 'bloque-libre'
           btnLibre.textContent = '+'
           btnLibre.title       = `${m.nombre} disponible`
           btnLibre.addEventListener('click', () => abrirModalAsignar(dia, hora, [m]))
+
+          // Recibir un bloque arrastrado (fuera del modo "asignar a alumno")
+          if (!nuevoEstId) {
+            btnLibre.addEventListener('dragover', (ev) => {
+              if (!bloqueArrastrado) return
+              ev.preventDefault()
+              btnLibre.classList.add('drop-target')
+            })
+            btnLibre.addEventListener('dragleave', () => btnLibre.classList.remove('drop-target'))
+            btnLibre.addEventListener('drop', (ev) => {
+              ev.preventDefault()
+              btnLibre.classList.remove('drop-target')
+              moverBloqueArrastrado(dia, hora, m.id_maestro)
+            })
+          }
+
           td.appendChild(btnLibre)
 
         } else if (nuevoEstId && estudianteOcupado.has(`${dia}_${hora}`)) {
@@ -309,6 +341,62 @@ function renderCalendario() {
   document.getElementById('calendarioScroll').style.display = 'block'
 }
 
+// ─── Arrastrar y soltar para mover un bloque ───────────────────────────────────
+function iniciarArrastre(ev, div, bloqs, dia, hora, maestroId) {
+  bloqueArrastrado = {
+    ids:       bloqs.map(b => b.id_horario || b.id),
+    dia, hora,
+    maestroId,
+    estudianteId: bloqs[0].estudiante_id || bloqs[0].id_estudiante,
+    tipo:      bloqs[0].tipo,
+    duracion:  Math.max(...bloqs.map(b => parseInt(b.duracion) || 30)),
+    alberca:   bloqs[0].alberca
+  }
+  ev.dataTransfer.effectAllowed = 'move'
+  div.classList.add('arrastrando')
+}
+
+function finalizarArrastre(div) {
+  div.classList.remove('arrastrando')
+  bloqueArrastrado = null
+}
+
+async function moverBloqueArrastrado(nuevoDia, nuevaHora, nuevoMaestroId) {
+  if (!bloqueArrastrado) return
+  const { ids, dia, hora, maestroId, tipo, duracion, alberca } = bloqueArrastrado
+
+  // Se soltó en la misma celda de la que salió → no hay nada que mover
+  if (dia === nuevoDia && hora === nuevaHora && maestroId === nuevoMaestroId) return
+
+  const [hh, mm] = nuevaHora.split(':').map(Number)
+  const tot      = hh * 60 + mm + duracion
+  const horaFin  = `${String(Math.floor(tot / 60)).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}:00`
+
+  try {
+    for (const id of ids) {
+      const res = await fetch(`/api/horarios/${id}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({
+          dia:         nuevoDia,
+          hora_inicio: nuevaHora + ':00',
+          hora_fin:    horaFin,
+          tipo, duracion, alberca,
+          maestro_id:  nuevoMaestroId
+        })
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        alert(d.message || 'No se pudo mover la clase.')
+        break
+      }
+    }
+  } catch (err) {
+    alert('Error de conexión al mover la clase.')
+  } finally {
+    await recargarCalendario()
+  }
+}
+
 // ─── Modal Asignar ────────────────────────────────────────────────────────────
 function abrirModalAsignar(dia, hora, maestrosLibres) {
   modalDia             = dia
@@ -318,8 +406,20 @@ function abrirModalAsignar(dia, hora, maestrosLibres) {
   duracionSeleccionada = 30
   albercaSeleccionada  = 1
 
-  document.getElementById('modalAsignarNombre').textContent =
-    estudianteAsignar ? estudianteAsignar.nombre : '—'
+  const wrapAlumno = document.getElementById('modalAsignarAlumnoWrap')
+  if (estudianteAsignar) {
+    // Modo "asignar horario a alumno específico" (viene del perfil del alumno)
+    wrapAlumno.style.display = 'none'
+    document.getElementById('modalAsignarNombre').textContent = estudianteAsignar.nombre
+  } else {
+    // Modo libre: se elige (o registra) el alumno desde el propio calendario
+    wrapAlumno.style.display = 'flex'
+    wrapAlumno.style.flexDirection = 'column'
+    document.getElementById('modalAsignarNombre').textContent = 'Nueva clase'
+    poblarSelectAlumnosModal()
+    cerrarFormNuevoAlumno()
+  }
+
   document.getElementById('modalAsignarSlot').textContent =
     `${DIAS_LABEL[DIAS.indexOf(dia)]} · ${hora}`
 
@@ -339,6 +439,87 @@ function abrirModalAsignar(dia, hora, maestrosLibres) {
 
 document.getElementById('modalAsignarCerrar').addEventListener('click',   () => { document.getElementById('modalAsignar').style.display = 'none' })
 document.getElementById('modalAsignarCancelar').addEventListener('click', () => { document.getElementById('modalAsignar').style.display = 'none' })
+
+// ─── Selector de alumno dentro del modal (modo libre, sin nuevoEstId) ─────────
+function poblarSelectAlumnosModal() {
+  const sel = document.getElementById('modalAsignarAlumnoSelect')
+  sel.innerHTML = ''
+  estudiantesData
+    .filter(e => e.activo !== false)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .forEach(e => {
+      const opt = document.createElement('option')
+      opt.value = e.id_estudiante
+      opt.textContent = e.folio ? `${e.nombre} (${e.folio})` : e.nombre
+      sel.appendChild(opt)
+    })
+}
+
+function cerrarFormNuevoAlumno() {
+  document.getElementById('modalAsignarNuevoAlumnoForm').style.display = 'none'
+  document.getElementById('modalAsignarAlumnoSelect').disabled = false
+  document.getElementById('naNombre').value    = ''
+  document.getElementById('naFolio').value     = ''
+  document.getElementById('naTelefono').value  = ''
+  document.getElementById('naPrecio').value    = ''
+  const err = document.getElementById('naError')
+  err.style.display = 'none'
+  err.textContent   = ''
+}
+
+document.getElementById('modalAsignarBtnNuevoAlumno').addEventListener('click', () => {
+  document.getElementById('modalAsignarNuevoAlumnoForm').style.display = 'flex'
+  document.getElementById('modalAsignarAlumnoSelect').disabled = true
+})
+
+document.getElementById('naCancelar').addEventListener('click', cerrarFormNuevoAlumno)
+
+document.getElementById('naGuardar').addEventListener('click', async () => {
+  const nombre = document.getElementById('naNombre').value.trim()
+  const err    = document.getElementById('naError')
+  err.style.display = 'none'
+
+  if (!nombre) {
+    err.textContent   = 'El nombre es requerido.'
+    err.style.display = 'block'
+    return
+  }
+
+  const btn = document.getElementById('naGuardar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
+  try {
+    const res = await fetch('/api/estudiantes', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        nombre,
+        folio:          document.getElementById('naFolio').value.trim()    || null,
+        telefono:       document.getElementById('naTelefono').value.trim() || null,
+        precio_mensual: parseFloat(document.getElementById('naPrecio').value) || 0
+      })
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      err.textContent   = data.message || 'No se pudo registrar el alumno.'
+      err.style.display = 'block'
+      return
+    }
+
+    estudiantesData.push(data.estudiante)
+    poblarSelectAlumnosModal()
+    document.getElementById('modalAsignarAlumnoSelect').value = data.estudiante.id_estudiante
+    cerrarFormNuevoAlumno()
+  } catch (e) {
+    err.textContent   = 'No se pudo conectar al servidor.'
+    err.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+})
 
 function actualizarBotonesTipo(tipo) {
   tipoSeleccionado = tipo
@@ -376,7 +557,14 @@ document.querySelectorAll('#modalAsignar .btn-alberca').forEach(b =>
 )
 
 document.getElementById('modalAsignarConfirmar').addEventListener('click', async () => {
-  if (!modalDia || !modalHora || !estudianteAsignar) return
+  if (!modalDia || !modalHora) return
+
+  // Modo libre (sin nuevoEstId): el alumno viene del selector del modal
+  const estudianteId = estudianteAsignar
+    ? estudianteAsignar.id_estudiante
+    : parseInt(document.getElementById('modalAsignarAlumnoSelect').value)
+
+  if (!estudianteId) { alert('Selecciona un alumno.'); return }
 
   const btn = document.getElementById('modalAsignarConfirmar')
   btn.disabled = true
@@ -388,11 +576,41 @@ document.getElementById('modalAsignarConfirmar').addEventListener('click', async
   const tot       = hh * 60 + mm + duracionSeleccionada
   const horaFin   = `${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}:00`
 
+  const resetBoton = () => {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+  }
+
+  // Modo libre: el alumno no viene precargado, así que se valida aquí que no
+  // tenga ya una clase con OTRO maestro en ese mismo horario (el backend solo
+  // valida choques del lado del maestro).
+  if (!estudianteAsignar) {
+    try {
+      const resChk = await fetch(`/api/horarios/estudiante/${estudianteId}`, { headers })
+      const horariosAlumno = (await resChk.json()).horarios || []
+      const newStart = hh * 60 + mm
+      const newEnd   = newStart + duracionSeleccionada
+      const chocaConOtro = horariosAlumno.some(h => {
+        if (h.dia !== modalDia) return false
+        const [exH, exM] = h.hora_inicio.split(':').map(Number)
+        const exStart = exH * 60 + exM
+        const exEnd   = exStart + (parseInt(h.duracion) || 30)
+        return newStart < exEnd && exStart < newEnd
+      })
+      if (chocaConOtro) {
+        alert('Este alumno ya tiene una clase en ese horario.')
+        resetBoton()
+        return
+      }
+    } catch (e) { /* si falla la verificación, se continúa; el backend igual valida el lado del maestro */ }
+  }
+
   try {
     const res = await fetch('/api/horarios', {
       method: 'POST', headers,
       body: JSON.stringify({
-        estudiante_id: estudianteAsignar.id_estudiante,
+        estudiante_id: estudianteId,
         maestro_id:    maestroId,
         dia:           modalDia,
         hora_inicio:   modalHora + ':00',
@@ -406,13 +624,15 @@ document.getElementById('modalAsignarConfirmar').addEventListener('click', async
     if (!res.ok) { alert(data.message || 'Error al asignar.'); return }
 
     document.getElementById('modalAsignar').style.display = 'none'
-    window.location.href = `perfil-estudiante.html?id=${nuevoEstId}`
+
+    // Igual que el resto de los flujos de alta de clase: regresa al perfil del
+    // alumno con ?nuevaClase=true para que salga el mensaje de precio mensual /
+    // cargo extra, y quede reflejado en Historial de pagos, Pagos y Reportes.
+    window.location.href = `perfil-estudiante.html?id=${estudianteId}&nuevaClase=true`
   } catch (err) {
     alert('Error de conexión.')
   } finally {
-    btn.disabled = false
-    btn.querySelector('.btn-text').style.display   = 'inline'
-    btn.querySelector('.btn-loader').style.display = 'none'
+    resetBoton()
   }
 })
 

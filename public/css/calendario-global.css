@@ -87,6 +87,8 @@
 /* Bloque de clase */
 .celda-clase { width: 100%; border-radius: 5px; padding: 4px 6px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; transition: opacity 0.15s, transform 0.1s; min-height: 30px; box-sizing: border-box; }
 .celda-clase:hover { opacity: 0.82; transform: scale(1.01); }
+.celda-clase[draggable="true"] { cursor: grab; }
+.celda-clase.arrastrando { opacity: 0.35; }
 .celda-grupal { border: 1.5px dashed rgba(255,255,255,0.4); }
 .celda-grupal-unirse { border: 1.5px dashed rgba(255,255,255,0.7) !important; cursor: pointer; }
 .celda-grupal-unirse:hover { opacity: 1 !important; border-color: rgba(255,255,255,1) !important; }
@@ -102,6 +104,7 @@
 /* Slot libre (modo asignación) */
 .bloque-libre { width: 100%; min-height: 30px; border-radius: 5px; border: 1.5px dashed rgba(37,99,235,0.5); background: rgba(37,99,235,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, border-color 0.2s; color: rgba(37,99,235,0.7); font-size: 1rem; font-weight: 700; }
 .bloque-libre:hover { background: rgba(37,99,235,0.22); border-color: rgba(37,99,235,0.9); color: #60a5fa; }
+.bloque-libre.drop-target { background: rgba(34,197,94,0.25); border-color: rgba(34,197,94,0.9); color: #4ade80; }
 
 /* Conflicto del alumno (ya tiene clase a esa hora) */
 .bloque-conflicto-est { width: 100%; min-height: 30px; border-radius: 5px; background: rgba(220,38,38,0.1); border: 1.5px solid rgba(220,38,38,0.3); }
@@ -192,6 +195,16 @@
 
 /* Info del alumno individual */
 #modalEditarAlumnoNombre { font-size: 0.88rem; font-weight: 600; color: #fff; padding: 0.5rem 0.8rem; background: rgba(255,255,255,0.06); border-radius: 10px; }
+
+/* Alta rápida de alumno desde el calendario (celda vacía) */
+.form-input { background: rgba(255,255,255,0.92); border: 2px solid transparent; border-radius: 999px; padding: 0.65rem 1rem; font-size: 0.88rem; color: #1e3a8a; font-family: var(--font-main); transition: border-color 0.2s; width: 100%; box-sizing: border-box; }
+.form-input:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.2); }
+.form-input::placeholder { color: rgba(30,58,138,0.4); }
+.nuevo-alumno-form { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.7rem; padding: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; }
+.nuevo-alumno-form-row { display: flex; gap: 0.6rem; }
+.nuevo-alumno-form-row .form-input { flex: 1; min-width: 0; }
+.nuevo-alumno-form-actions { display: flex; justify-content: flex-end; gap: 0.6rem; }
+.na-error { font-size: 0.78rem; color: #fca5a5; }
 
 .modal-actions { display: flex; gap: 0.8rem; justify-content: flex-end; }
 .btn-cancelar { padding: 0.65rem 1.2rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 500; cursor: pointer; font-family: var(--font-main); }

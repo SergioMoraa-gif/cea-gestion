@@ -147,21 +147,74 @@ async function crear(req, res) {
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
-// PATCH /api/horarios/:id — Modificar un bloque
+// PATCH /api/horarios/:id — Modificar un bloque (también usado para moverlo de día/hora/maestro)
 async function actualizar(req, res) {
   const { id } = req.params
-  const { dia, hora_inicio, hora_fin, hora_final, tipo, duracion, alberca } = req.body
+  const {
+    dia, hora_inicio, hora_fin, hora_final, tipo, duracion, alberca,
+    maestro_id, id_maestro
+  } = req.body
   const horaFin = hora_final || hora_fin
-
-  const updates = {}
-  if (dia)                                         updates.dia         = dia
-  if (hora_inicio)                                 updates.hora_inicio = hora_inicio
-  if (horaFin)                                     updates.hora_final  = horaFin
-  if (tipo && TIPOS_VALIDOS.includes(tipo))        updates.tipo        = tipo
-  if (duracion)                                    updates.duracion    = parseInt(duracion)
-  if (alberca && (alberca === 1 || alberca === 2)) updates.alberca     = parseInt(alberca)
+  const maestId = id_maestro || maestro_id
 
   try {
+    const { data: actual, error: errActual } = await supabase
+      .from('HorariosAlumnos')
+      .select('*')
+      .eq('id_horario', id)
+      .single()
+    if (errActual || !actual) return res.status(404).json({ message: 'Horario no encontrado.' })
+
+    const updates = {}
+    if (dia)                                         updates.dia         = dia
+    if (hora_inicio)                                 updates.hora_inicio = hora_inicio
+    if (horaFin)                                     updates.hora_final  = horaFin
+    if (tipo && TIPOS_VALIDOS.includes(tipo))        updates.tipo        = tipo
+    if (duracion)                                    updates.duracion    = parseInt(duracion)
+    if (alberca && (alberca === 1 || alberca === 2)) updates.alberca     = parseInt(alberca)
+    if (maestId)                                      updates.id_maestro  = parseInt(maestId)
+
+    // Valores efectivos que va a tener el registro después del update
+    const diaFinal      = updates.dia         || actual.dia
+    const horaFinal     = updates.hora_inicio || actual.hora_inicio
+    const tipoFinal     = updates.tipo        || actual.tipo
+    const albercaFinal  = updates.alberca     || actual.alberca
+    const duracionFinal = updates.duracion    || actual.duracion || 30
+    const maestroFinal  = updates.id_maestro  || actual.id_maestro
+
+    const [hh, mm] = horaFinal.split(':').map(Number)
+    const newStart = hh * 60 + mm
+    const newEnd   = newStart + duracionFinal
+
+    // Traer los demás bloques del día destino para validar conflictos (igual que al crear)
+    const { data: existentes } = await supabase
+      .from('HorariosAlumnos')
+      .select('id_horario, id_maestro, id_estudiante, hora_inicio, duracion, tipo, alberca')
+      .eq('dia', diaFinal)
+      .neq('id_horario', id)
+
+    const esGrupalOMatros = (t) => t === 'grupal' || t === 'matros'
+
+    if (existentes && existentes.length > 0) {
+      for (const ex of existentes) {
+        const [exH, exM] = ex.hora_inicio.split(':').map(Number)
+        const exStart    = exH * 60 + exM
+        const exEnd      = exStart + (ex.duracion || 30)
+
+        if (!(newStart < exEnd && exStart < newEnd)) continue // no se solapan, ignorar
+
+        if (parseInt(ex.id_maestro) === parseInt(maestroFinal)) {
+          if (esGrupalOMatros(tipoFinal) && tipoFinal === ex.tipo && exStart === newStart && ex.alberca === parseInt(albercaFinal)) {
+            if (parseInt(ex.id_estudiante) === parseInt(actual.id_estudiante)) {
+              return res.status(409).json({ message: 'El alumno ya está inscrito en ese grupo.' })
+            }
+            continue
+          }
+          return res.status(409).json({ message: 'El maestro ya tiene una clase en ese horario.' })
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('HorariosAlumnos')
       .update(updates)

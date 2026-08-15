@@ -81,7 +81,7 @@
         <div class="btn-ayuda-wrap">
           <button class="btn-ayuda">?</button>
           <div class="ayuda-tooltip">
-            Aquí ves los horarios de todos los maestros en la semana completa. Da clic en cualquier clase para editarla o moverla. Usa el botón "Imprimir" junto a cada día para imprimir solo ese día.
+            Aquí ves los horarios de todos los maestros en la semana completa. Da clic en cualquier clase para editarla, moverla o ver el perfil del alumno — o arrástrala directamente a otro horario/maestro para moverla de una vez. Da clic en un espacio vacío (+) para agregar una clase nueva — puedes elegir un alumno existente o registrar uno nuevo ahí mismo. Usa el botón "Imprimir" junto a cada día para imprimir solo ese día.
           </div>
         </div>
         <a href="dashboard.html" class="btn-dashboard">
@@ -132,6 +132,31 @@
         <span class="modal-asignar-alumno" id="modalAsignarNombre">—</span>
         <span class="modal-sep">·</span>
         <span class="modal-asignar-slot" id="modalAsignarSlot">—</span>
+      </div>
+
+      <div class="form-group" id="modalAsignarAlumnoWrap" style="display:none">
+        <label class="form-label">Alumno</label>
+        <select id="modalAsignarAlumnoSelect" class="form-select"></select>
+        <button type="button" class="btn-agregar-grupo" id="modalAsignarBtnNuevoAlumno">+ Nuevo alumno</button>
+
+        <div id="modalAsignarNuevoAlumnoForm" class="nuevo-alumno-form" style="display:none">
+          <input type="text" id="naNombre" class="form-input" placeholder="Nombre completo" />
+          <div class="nuevo-alumno-form-row">
+            <input type="text" id="naFolio" class="form-input" placeholder="Folio (opcional)" />
+            <input type="text" id="naTelefono" class="form-input" placeholder="Teléfono (opcional)" />
+          </div>
+          <input type="number" id="naPrecio" class="form-input" placeholder="Precio mensual" min="0" />
+          <div id="naError" class="na-error" style="display:none"></div>
+          <div class="nuevo-alumno-form-actions">
+            <button type="button" class="btn-cancelar" id="naCancelar">Cancelar</button>
+            <button type="button" class="btn-guardar" id="naGuardar">
+              <span class="btn-text">Guardar alumno</span>
+              <span class="btn-loader" style="display:none">
+                <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="form-group">

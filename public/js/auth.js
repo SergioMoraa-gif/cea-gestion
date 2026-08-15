@@ -80,8 +80,8 @@ async function iniciarSesion() {
     sessionStorage.setItem('cea_token', data.token)
     sessionStorage.setItem('cea_user',  JSON.stringify(data.user))
 
-    // Redirigir al dashboard
-    window.location.href = 'dashboard.html'
+    // Redirigir al calendario global
+    window.location.href = 'calendario-global.html'
 
   } catch (err) {
     console.error('Error de conexión:', err)
