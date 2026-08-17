@@ -157,7 +157,12 @@ async function cargarHorarios() {
 
 // ─── Renderizar calendario ───────────────────────────────────────────────────
 function renderizarCalendario() {
-  const diasMaestro = maestroActual ? (maestroActual.dias_trabajo || DIAS) : DIAS
+  // dias_trabajo null o [] significa "sin restricción, trabaja todos los días" (igual que en
+  // calendario-global.js). Con solo "|| DIAS" un arreglo vacío ([] es "truthy" en JS) se colaba
+  // como "diasMaestro = []" y ocultaba el calendario completo.
+  const diasMaestro = (maestroActual && maestroActual.dias_trabajo && maestroActual.dias_trabajo.length > 0)
+    ? maestroActual.dias_trabajo
+    : DIAS
   const diasMostrar = DIAS.filter(d => diasMaestro.includes(d))
 
   const head = document.getElementById('calendarioHead')

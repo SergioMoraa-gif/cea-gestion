@@ -14,6 +14,10 @@ const headers = {
 let maestroEditandoId = null
 let maestroBajaId     = null
 
+// Mismo significado de "sin restricción" que usan calendario-global.js y perfil-maestro.js
+// cuando dias_trabajo viene null/vacío.
+const DIAS_TODAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
+
 // --- Sidebar ---
 const sidebar         = document.getElementById('sidebar')
 const btnMenu         = document.getElementById('btnMenu')
@@ -175,7 +179,14 @@ async function editarMaestro(id) {
     formTitle.textContent = 'Editar maestro'
     inputNombre.value     = m.nombre
     inputTel.value        = m.telefono || ''
-    setDias(m.dias_trabajo || [])
+    // dias_trabajo sin definir (null) significa "sin restricción, trabaja todos los días"
+    // en el resto de la app (ver calendario-global.js y perfil-maestro.js). Si al abrir el
+    // formulario lo dejamos vacío, obligamos a elegir días desde cero y se puede guardar por
+    // error un subconjunto chico, ocultando del calendario clases ya agendadas otros días.
+    const diasParaMostrar = (m.dias_trabajo && m.dias_trabajo.length > 0)
+      ? m.dias_trabajo
+      : DIAS_TODAS
+    setDias(diasParaMostrar)
     ocultarError()
     formCard.style.display = 'block'
     inputNombre.focus()
