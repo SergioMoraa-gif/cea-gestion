@@ -90,13 +90,21 @@ async function generar(req, res) {
       .eq('activo', true)
     if (errEst) return res.status(500).json({ message: errEst.message })
 
+    // Solo los que tienen horario/clase asignado (igual que el cron automático)
+    const { data: horarios, error: errHor } = await supabase
+      .from('HorariosAlumnos')
+      .select('id_estudiante')
+    if (errHor) return res.status(500).json({ message: errHor.message })
+    const idsConHorario = new Set((horarios || []).map(h => h.id_estudiante))
+    const estudiantesConClase = (estudiantes || []).filter(e => idsConHorario.has(e.id_estudiante))
+
     // Cargos ya existentes para ese mes
     const { data: existentes } = await supabase
       .from('Pagos').select('id_estudiante').eq('mes', mes)
     const idsExistentes = new Set((existentes || []).map(p => p.id_estudiante))
 
     // Generar solo los que no existen
-    const nuevos = (estudiantes || [])
+    const nuevos = estudiantesConClase
       .filter(e => !idsExistentes.has(e.id_estudiante))
       .map(e => ({
         id_estudiante: e.id_estudiante,

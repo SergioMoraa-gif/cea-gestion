@@ -720,9 +720,23 @@ function renderPagos() {
   const emptyEl   = document.getElementById('emptyPagos')
   const wrapEl    = document.getElementById('tablaPagosWrapper')
   const body      = document.getElementById('tablaPagosBody')
+  const totalEl   = document.getElementById('totalAdeudado')
 
   loadingEl.style.display = 'none'
   body.innerHTML = ''
+
+  // Total adeudado: suma de todos los cargos pendientes del alumno, sin
+  // importar el mes (incluye meses anteriores que se hayan quedado sin pagar).
+  const totalPendiente = pagosData
+    .filter(p => p.estado === 'pendiente')
+    .reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
+
+  if (totalPendiente > 0) {
+    totalEl.textContent   = `Total pendiente: $${totalPendiente.toLocaleString('es-MX')}`
+    totalEl.style.display = 'inline-block'
+  } else {
+    totalEl.style.display = 'none'
+  }
 
   if (pagosData.length === 0) {
     emptyEl.style.display = 'block'

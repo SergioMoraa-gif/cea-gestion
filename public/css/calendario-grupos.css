@@ -128,6 +128,14 @@
   white-space: nowrap;
 }
 
+.grupo-row-nombre-link {
+  cursor: pointer;
+}
+
+.grupo-row-nombre-link:hover {
+  text-decoration: underline;
+}
+
 .grupo-row-folio {
   font-size: 0.76rem;
   flex-shrink: 0;

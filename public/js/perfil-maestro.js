@@ -225,6 +225,13 @@ function renderizarCalendario() {
   }
 
   BLOQUES.forEach(hora => {
+    // Modo normal (solo visualización, sin asignar alumno): ocultar horas
+    // sin ninguna clase en ningún día para no mostrar filas vacías.
+    if (!estudianteAsignar) {
+      const hayBloqueEnHora = diasMostrar.some(dia => (mapa[`${dia}_${hora}:00`] || []).length > 0)
+      if (!hayBloqueEnHora) return
+    }
+
     const tr  = document.createElement('tr')
     const tdH = document.createElement('td')
     tdH.className = 'td-hora'; tdH.textContent = hora

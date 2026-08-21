@@ -192,6 +192,14 @@ function renderGrupos() {
           `<span class="grupo-row-nombre">${nombreText}</span>` +
           `<span class="grupo-row-folio">${folioText}${asterisco}</span>`
 
+        if (est) {
+          const nombreSpan = row.querySelector('.grupo-row-nombre')
+          nombreSpan.classList.add('grupo-row-nombre-link')
+          nombreSpan.addEventListener('click', () => {
+            window.location.href = `perfil-estudiante.html?id=${estId}`
+          })
+        }
+
         rowsDiv.appendChild(row)
         rowCount++
       })
