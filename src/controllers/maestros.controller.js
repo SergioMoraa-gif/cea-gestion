@@ -11,6 +11,7 @@ async function listar(req, res) {
     const { data, error } = await supabase
       .from('Maestros')
       .select('*')
+      .order('orden', { ascending: true, nullsFirst: false })
       .order('nombre', { ascending: true })
     if (error) return res.status(500).json({ message: error.message })
     res.json({ maestros: data })
@@ -116,6 +117,26 @@ async function eliminar(req, res) {
   }
 }
 
+// PATCH /api/maestros/orden — reordena las columnas del Calendario Global
+async function actualizarOrden(req, res) {
+  const { orden } = req.body
+  if (!Array.isArray(orden) || orden.length === 0) {
+    return res.status(400).json({ message: 'Se requiere un arreglo con los IDs de maestro en el nuevo orden.' })
+  }
+  try {
+    for (let i = 0; i < orden.length; i++) {
+      const { error } = await supabase
+        .from('Maestros')
+        .update({ orden: i })
+        .eq('id_maestro', orden[i])
+      if (error) return res.status(500).json({ message: error.message })
+    }
+    res.json({ message: 'Orden actualizado.' })
+  } catch (err) {
+    res.status(500).json({ message: 'Error interno del servidor.' })
+  }
+}
+
 // GET /api/maestros/count
 async function contar(req, res) {
   try {
@@ -130,4 +151,4 @@ async function contar(req, res) {
   }
 }
 
-module.exports = { listar, obtener, crear, actualizar, darBaja, reactivar, eliminar, contar }
+module.exports = { listar, obtener, crear, actualizar, darBaja, reactivar, eliminar, contar, actualizarOrden }

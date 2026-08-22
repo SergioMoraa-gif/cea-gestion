@@ -70,6 +70,19 @@
 .btn-imprimir-dia { display: flex; align-items: center; gap: 0.3rem; padding: 0.18rem 0.6rem; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13); border-radius: 999px; color: rgba(255,255,255,0.45); font-size: 0.62rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); transition: background 0.2s, color 0.2s; white-space: nowrap; }
 .btn-imprimir-dia svg { width: 10px; height: 10px; flex-shrink: 0; }
 .btn-imprimir-dia:hover { background: rgba(255,255,255,0.16); color: #fff; }
+
+.btn-reordenar-dia { display: flex; align-items: center; gap: 0.3rem; padding: 0.18rem 0.6rem; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13); border-radius: 999px; color: rgba(255,255,255,0.45); font-size: 0.62rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); transition: background 0.2s, color 0.2s; white-space: nowrap; margin-left: auto; }
+.btn-reordenar-dia svg { width: 10px; height: 10px; flex-shrink: 0; }
+.btn-reordenar-dia:hover { background: rgba(255,255,255,0.16); color: #fff; }
+.btn-reordenar-dia.activo { background: rgba(110,180,255,0.28); border-color: rgba(150,200,255,0.55); color: #fff; }
+
+/* Flechas de reordenar maestro (dentro del th, visibles solo en modo reordenar) */
+.th-orden-flechas { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 4px; }
+.th-flecha { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 5px; background: rgba(255,255,255,0.14); border: none; color: #fff; cursor: pointer; padding: 0; }
+.th-flecha svg { width: 9px; height: 9px; }
+.th-flecha:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
+.th-flecha:disabled { opacity: 0.2; cursor: default; }
+.th-maestro.th-reordenable { background: rgba(110,180,255,0.1); }
 .dia-tabla-scroll { overflow-x: auto; border-radius: 14px; }
 .calendario-dia { width: 100%; border-collapse: collapse; background: rgba(20,45,130,0.4); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 14px; overflow: hidden; }
 
@@ -360,5 +373,7 @@
   .celda-cont { opacity: 0.4; }
   .bloque-libre, .bloque-conflicto-est { display: none !important; }
   .btn-imprimir-dia { display: none !important; }
+  .btn-reordenar-dia { display: none !important; }
+  .th-orden-flechas { display: none !important; }
   .ocultar-impresion { display: none !important; }
 }

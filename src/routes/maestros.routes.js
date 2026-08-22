@@ -5,10 +5,11 @@
 
 const express = require('express')
 const router  = express.Router()
-const { listar, obtener, crear, actualizar, darBaja, reactivar, eliminar, contar } = require('../controllers/maestros.controller')
+const { listar, obtener, crear, actualizar, darBaja, reactivar, eliminar, contar, actualizarOrden } = require('../controllers/maestros.controller')
 
 router.get('/',              listar)
 router.get('/count',         contar)
+router.patch('/orden',       actualizarOrden)
 router.get('/:id',           obtener)
 router.post('/',             crear)
 router.put('/:id',           actualizar)

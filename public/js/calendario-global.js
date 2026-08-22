@@ -55,6 +55,18 @@ let albercaEditando   = 1
 // Arrastrar y soltar para mover un bloque de horario
 let bloqueArrastrado = null
 
+// Reordenar columnas de maestro (mismo orden aplica a todos los días)
+let modoReordenar = false
+
+// Devuelve los maestros que trabajan ese día, en el orden vigente de maestrosData
+function maestrosDelDiaFn(dia) {
+  return maestrosData.filter(m => {
+    const diasT = m.dias_trabajo
+    if (!diasT || !Array.isArray(diasT) || diasT.length === 0) return true
+    return diasT.includes(dia)
+  })
+}
+
 // Muestra "PRIMER_NOMBRE FOLIO" en las celdas del calendario
 function etiquetaAlumno(est) {
   if (!est) return '—'
@@ -173,11 +185,7 @@ function renderCalendario() {
   })
 
   DIAS.forEach((dia, diaIdx) => {
-    const maestrosDelDia = maestrosData.filter(m => {
-      const diasT = m.dias_trabajo
-      if (!diasT || !Array.isArray(diasT) || diasT.length === 0) return true
-      return diasT.includes(dia)
-    })
+    const maestrosDelDia = maestrosDelDiaFn(dia)
     if (maestrosDelDia.length === 0) return
 
     const seccion = document.createElement('div')
@@ -191,6 +199,14 @@ function renderCalendario() {
     titulo.className   = 'dia-titulo'
     titulo.textContent = DIAS_LABEL[diaIdx]
 
+    const btnReordenarDia = document.createElement('button')
+    btnReordenarDia.className = `btn-reordenar-dia${modoReordenar ? ' activo' : ''}`
+    btnReordenarDia.title     = modoReordenar ? 'Terminar de reordenar' : 'Reordenar maestros'
+    btnReordenarDia.innerHTML = modoReordenar
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Listo`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 8 22 12 18 16"/><polyline points="6 8 2 12 6 16"/><line x1="2" y1="12" x2="22" y2="12"/></svg> Reordenar`
+    btnReordenarDia.addEventListener('click', toggleModoReordenar)
+
     const btnImprDia = document.createElement('button')
     btnImprDia.className = 'btn-imprimir-dia'
     btnImprDia.title     = `Imprimir ${DIAS_LABEL[diaIdx]}`
@@ -198,6 +214,7 @@ function renderCalendario() {
     btnImprDia.addEventListener('click', () => imprimirDia(dia, DIAS_LABEL[diaIdx]))
 
     tituloRow.appendChild(titulo)
+    tituloRow.appendChild(btnReordenarDia)
     tituloRow.appendChild(btnImprDia)
     seccion.appendChild(tituloRow)
 
@@ -215,11 +232,37 @@ function renderCalendario() {
     thHora.textContent = 'Hora'
     trH.appendChild(thHora)
 
-    maestrosDelDia.forEach(m => {
+    maestrosDelDia.forEach((m, mIdx) => {
       const th     = document.createElement('th')
-      th.className = 'th-maestro'
+      th.className = 'th-maestro' + (modoReordenar ? ' th-reordenable' : '')
       th.title     = m.nombre
       th.innerHTML = `<span class="th-dot ${colorMap[m.id_maestro] || 'color-0'}"></span><span class="th-nombre">${m.nombre.split(' ')[0]}</span>`
+
+      if (modoReordenar) {
+        const flechas = document.createElement('div')
+        flechas.className = 'th-orden-flechas'
+
+        const btnIzq = document.createElement('button')
+        btnIzq.className = 'th-flecha'
+        btnIzq.type      = 'button'
+        btnIzq.disabled  = mIdx === 0
+        btnIzq.title     = `Mover a ${m.nombre.split(' ')[0]} a la izquierda`
+        btnIzq.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`
+        btnIzq.addEventListener('click', () => moverMaestro(dia, m.id_maestro, -1))
+
+        const btnDer = document.createElement('button')
+        btnDer.className = 'th-flecha'
+        btnDer.type      = 'button'
+        btnDer.disabled  = mIdx === maestrosDelDia.length - 1
+        btnDer.title     = `Mover a ${m.nombre.split(' ')[0]} a la derecha`
+        btnDer.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`
+        btnDer.addEventListener('click', () => moverMaestro(dia, m.id_maestro, 1))
+
+        flechas.appendChild(btnIzq)
+        flechas.appendChild(btnDer)
+        th.appendChild(flechas)
+      }
+
       trH.appendChild(th)
     })
 
@@ -339,6 +382,46 @@ function renderCalendario() {
 
   document.getElementById('loadingCal').style.display       = 'none'
   document.getElementById('calendarioScroll').style.display = 'block'
+}
+
+// ─── Reordenar columnas de maestro ─────────────────────────────────────────────
+function toggleModoReordenar() {
+  modoReordenar = !modoReordenar
+  renderCalendario()
+}
+
+// Intercambia al maestro con su vecino visible ese día (izquierda: -1, derecha: +1).
+// El orden es global: el intercambio se aplica sobre maestrosData completo, así
+// que se refleja igual en el resto de los días.
+async function moverMaestro(dia, maestroId, direccion) {
+  const listaDia = maestrosDelDiaFn(dia)
+  const idx      = listaDia.findIndex(m => m.id_maestro === maestroId)
+  const nuevoIdx = idx + direccion
+  if (idx === -1 || nuevoIdx < 0 || nuevoIdx >= listaDia.length) return
+
+  const otroId = listaDia[nuevoIdx].id_maestro
+  const gi = maestrosData.findIndex(m => m.id_maestro === maestroId)
+  const gj = maestrosData.findIndex(m => m.id_maestro === otroId)
+  if (gi === -1 || gj === -1) return
+
+  ;[maestrosData[gi], maestrosData[gj]] = [maestrosData[gj], maestrosData[gi]]
+  renderCalendario()
+  await guardarOrdenMaestros()
+}
+
+async function guardarOrdenMaestros() {
+  try {
+    const res = await fetch('/api/maestros/orden', {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ orden: maestrosData.map(m => m.id_maestro) })
+    })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      alert(d.message || 'No se pudo guardar el nuevo orden.')
+    }
+  } catch (err) {
+    alert('Error de conexión al guardar el orden.')
+  }
 }
 
 // ─── Arrastrar y soltar para mover un bloque ───────────────────────────────────
