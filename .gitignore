@@ -13,3 +13,8 @@ npm-debug.log*
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Datos personales de alumnos (nombres, teléfonos) - no subir al repositorio
+LISTADO ALUMNOS*.xlsx
+_alumnos_final.json
+backups/
