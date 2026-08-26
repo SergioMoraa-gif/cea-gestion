@@ -54,6 +54,9 @@ document.getElementById('btnLogout').addEventListener('click', () => {
 document.getElementById('btnVolver').addEventListener('click', () => {
   window.location.href = 'estudiantes.html'
 })
+document.getElementById('btnCalendarioGlobal').addEventListener('click', () => {
+  window.location.href = 'calendario-global.html'
+})
 
 // ─── Inicializar ────────────────────────────────────────────
 async function iniciar() {
