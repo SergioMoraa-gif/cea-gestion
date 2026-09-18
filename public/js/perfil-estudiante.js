@@ -16,6 +16,18 @@ const DIAS       = ['lunes','martes','miercoles','jueves','viernes','sabado']
 const DIAS_LABEL = ['Lunes','Martes','Miérc.','Jueves','Viernes','Sábado']
 const COLORES    = ['color-0','color-1','color-2','color-3','color-4','color-5']
 
+// Color de fondo/letra por clase (se edita solo desde Calendario Global; aquí
+// nada más se muestra). "null"/"" es "por defecto" → gris neutro.
+const PALETA_COLOR = {
+  azul:     { bg: 'rgba(56,189,248,0.55)',  texto: '#38bdf8' },
+  rosa:     { bg: 'rgba(244,114,182,0.55)', texto: '#f472b6' },
+  amarillo: { bg: 'rgba(250,204,21,0.55)',  texto: '#facc15' },
+  verde:    { bg: 'rgba(74,222,128,0.55)',  texto: '#4ade80' }
+}
+const COLOR_DEFECTO = { bg: 'rgba(148,163,184,0.45)', texto: '#f1f5f9' }
+function colorFondoDe(h) { return (h && PALETA_COLOR[h.color_fondo]) ? PALETA_COLOR[h.color_fondo].bg    : COLOR_DEFECTO.bg }
+function colorLetraDe(h) { return (h && PALETA_COLOR[h.color_letra]) ? PALETA_COLOR[h.color_letra].texto : COLOR_DEFECTO.texto }
+
 const BLOQUES = []
 for (let h = 9; h <= 19; h++) {
   BLOQUES.push(`${String(h).padStart(2,'0')}:00`)
@@ -102,7 +114,17 @@ function renderInfo() {
   document.getElementById('infoNombre').textContent   = e.nombre    || '—'
   document.getElementById('infoFolio').textContent    = e.folio     || '—'
   document.getElementById('infoTelefono').textContent = e.telefono  || '—'
-  document.getElementById('infoPrecio').textContent   = `$${Number(e.precio_mensual || 0).toLocaleString('es-MX')}`
+
+  const precioTxt = `$${Number(e.precio_mensual || 0).toLocaleString('es-MX')}`
+  const precioEl  = document.getElementById('infoPrecio')
+  if (horariosData.length === 0) {
+    // Sin bloques asignados: se conserva el precio (por si vuelve a tomar
+    // clase) pero se marca para que no parezca una cuota vigente.
+    precioEl.innerHTML = `<span class="precio-inactivo">${precioTxt}</span> <span class="badge-sin-clase">Sin clase asignada</span>`
+  } else {
+    precioEl.textContent = precioTxt
+  }
+
   const estadoEl = document.getElementById('infoEstado')
   estadoEl.innerHTML = e.activo
     ? '<span class="badge-activo">Activo</span>'
@@ -186,11 +208,6 @@ function renderCalendario() {
   // Si no tiene clases, mostrar todos los días
   const diasRender    = diasMostrar.length > 0 ? diasMostrar : DIAS
 
-  // Color por maestro
-  const colorMap = {}
-  let ci = 0
-  maestrosData.forEach(m => { colorMap[m.id_maestro] = COLORES[ci++ % COLORES.length] })
-
   head.innerHTML = `<tr>
     <th>Hora</th>
     ${diasRender.map(d => `<th class="dia-activo">${DIAS_LABEL[DIAS.indexOf(d)]}</th>`).join('')}
@@ -242,7 +259,9 @@ function renderCalendario() {
         bloqs.forEach(b => {
           const maestro = maestrosData.find(m => m.id_maestro === (b.maestro_id || b.id_maestro))
           const div     = document.createElement('div')
-          div.className = `bloque-clase ${colorMap[b.maestro_id || b.id_maestro] || 'color-0'}${maxDur > 30 ? ' bloque-grande' : ''}`
+          div.className = `bloque-clase${maxDur > 30 ? ' bloque-grande' : ''}`
+          div.style.background = colorFondoDe(b)
+          div.style.color      = colorLetraDe(b)
           const tipoLabel = b.tipo === 'grupal' ? 'Grupal' : b.tipo === 'matros' ? 'Matros' : 'Individual'
           div.innerHTML = `
             <div class="bc-maestro">${maestro ? maestro.nombre : '—'}</div>
@@ -434,14 +453,9 @@ document.getElementById('btnEliminarBloque').addEventListener('click', async () 
     document.getElementById('modalBloque').style.display = 'none'
     await recargarHorarios()
 
-    // Preguntar si desea descontar del mes actual
-    const mes = mesActualStr()
-    const pagoPendiente = pagosData.find(p =>
-      p.tipo === 'mensual' &&
-      p.estado === 'pendiente' &&
-      p.mes && p.mes.startsWith(mes)
-    )
-    if (pagoPendiente) abrirModalAjuste('restar', pagoPendiente)
+    // Sí o sí se avisa que se puede descontar algo, tenga o no pago pendiente
+    // del mes actual (busca el pendiente más próximo si el de este mes no existe).
+    abrirModalAjuste('restar', buscarPagoPendienteParaDescuento())
   } catch (err) {
     alert('Error de conexión.')
   }
@@ -453,17 +467,56 @@ function mesActualStr() {
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2,'0')}`
 }
 
+// Pago pendiente contra el cual ofrecer el descuento tras eliminar una clase:
+// prioriza el del mes actual y, si no existe, el pendiente más próximo (el mes
+// más antiguo primero) de cualquier otro mes.
+function buscarPagoPendienteParaDescuento() {
+  const mes = mesActualStr()
+  const delMesActual = pagosData.find(p =>
+    p.tipo === 'mensual' && p.estado === 'pendiente' && p.mes && p.mes.startsWith(mes)
+  )
+  if (delMesActual) return delMesActual
+
+  const pendientes = pagosData
+    .filter(p => p.tipo === 'mensual' && p.estado === 'pendiente' && p.mes)
+    .sort((a, b) => a.mes.localeCompare(b.mes))
+  return pendientes[0] || null
+}
+
 function abrirModalAjuste(modo, pagoExistente = null) {
   modoAjuste = modo
   pagoAjuste = pagoExistente
   document.getElementById('modalAjusteMonto').value = ''
 
-  const montoActual = pagoExistente ? `$${Number(pagoExistente.monto).toLocaleString('es-MX')}` : '—'
+  const inputMonto   = document.getElementById('modalAjusteMonto')
+  const labelMonto   = document.getElementById('modalAjusteLabel')
+  const btnConfirmar = document.getElementById('modalAjusteConfirmar')
+  const btnOmitir    = document.getElementById('modalAjusteOmitir')
+
   document.getElementById('modalAjusteTitulo').textContent = 'Descuento del mes actual'
-  document.getElementById('modalAjusteDesc').textContent =
-    `Se eliminó una clase. El cargo pendiente de este mes es ${montoActual}. ¿Deseas descontar algo?`
-  document.getElementById('modalAjusteLabel').textContent =
-    'Monto a descontar (dejar vacío para no modificar)'
+
+  if (modo === 'restar' && !pagoExistente) {
+    // El alumno no tiene ningún pago pendiente contra el cual descontar.
+    document.getElementById('modalAjusteDesc').textContent =
+      'Se eliminó una clase. Este alumno no tiene ningún pago pendiente en este momento, así que no hay nada de qué descontar.'
+    inputMonto.style.display   = 'none'
+    labelMonto.style.display   = 'none'
+    btnConfirmar.style.display = 'none'
+    btnOmitir.textContent      = 'Entendido'
+  } else {
+    const montoActual = pagoExistente ? `$${Number(pagoExistente.monto).toLocaleString('es-MX')}` : '—'
+    const mesTxt = pagoExistente
+      ? new Date(pagoExistente.mes + 'T12:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long' })
+      : ''
+    document.getElementById('modalAjusteDesc').textContent = pagoExistente
+      ? `Se eliminó una clase. El cargo pendiente de ${mesTxt} es ${montoActual}. ¿Deseas descontar algo?`
+      : `Se eliminó una clase. El cargo pendiente es ${montoActual}. ¿Deseas descontar algo?`
+    labelMonto.textContent      = 'Monto a descontar (dejar vacío para no modificar)'
+    inputMonto.style.display   = ''
+    labelMonto.style.display   = ''
+    btnConfirmar.style.display = ''
+    btnOmitir.textContent      = 'Omitir'
+  }
 
   document.getElementById('modalAjuste').style.display = 'flex'
 }
@@ -677,6 +730,7 @@ async function recargarHorarios() {
     ])
     horariosData = (await resHor.json()).horarios || []
     pagosData    = (await resPag.json()).pagos    || []
+    renderInfo()
     renderCalendario()
     renderPagos()
   } catch (err) {

@@ -267,6 +267,32 @@
     </div>
   </div>
 
+  <!-- MODAL: Descuento tras eliminar clase -->
+  <div class="modal-overlay" id="modalAjuste" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalAjusteTitulo">Descuento del mes</h3>
+        <button class="btn-cerrar-form" id="modalAjusteCerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="modal-desc" id="modalAjusteDesc">—</p>
+      <div class="form-group" id="modalAjusteMontoWrap">
+        <label class="form-label" id="modalAjusteLabel">Monto a descontar</label>
+        <input type="number" id="modalAjusteMonto" class="form-input" placeholder="Dejar vacío para omitir" min="0" step="0.01"/>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancelar" id="modalAjusteOmitir">Omitir</button>
+        <button class="btn-guardar" id="modalAjusteConfirmar">
+          <span class="btn-text">Aplicar</span>
+          <span class="btn-loader" style="display:none">
+            <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/perfil-maestro.js"></script>
 </body>
 </html>

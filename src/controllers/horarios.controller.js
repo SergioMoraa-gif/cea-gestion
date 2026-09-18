@@ -5,7 +5,8 @@
 
 const supabase = require('../config/db')
 
-const TIPOS_VALIDOS = ['individual', 'grupal', 'matros']
+const TIPOS_VALIDOS  = ['individual', 'grupal', 'matros']
+const COLORES_VALIDOS = ['azul', 'rosa', 'amarillo', 'verde']
 
 function normalizar(h) {
   return {
@@ -21,7 +22,9 @@ function normalizar(h) {
     hora_final:    h.hora_final,
     tipo:          h.tipo,
     duracion:      h.duracion,
-    alberca:       h.alberca
+    alberca:       h.alberca,
+    color_fondo:   h.color_fondo || null,
+    color_letra:   h.color_letra || null
   }
 }
 
@@ -74,7 +77,8 @@ async function crear(req, res) {
     estudiante_id, id_estudiante,
     maestro_id,    id_maestro,
     dia, hora_inicio, hora_fin, hora_final,
-    tipo, duracion, alberca
+    tipo, duracion, alberca,
+    color_fondo, color_letra
   } = req.body
 
   const estId   = id_estudiante || estudiante_id
@@ -93,11 +97,17 @@ async function crear(req, res) {
   const newStart    = hh * 60 + mm
   const newEnd      = newStart + duracionMin
 
+  // Color de la clase (independiente del maestro). Si el alumno termina
+  // uniéndose a un grupo/matros ya existente, más abajo se sobreescribe con
+  // el color de ese grupo para que toda la celda se vea uniforme.
+  let colorFondoFinal = COLORES_VALIDOS.includes(color_fondo) ? color_fondo : null
+  let colorLetraFinal = COLORES_VALIDOS.includes(color_letra) ? color_letra : null
+
   try {
     // Traer todos los bloques del mismo día para validar conflictos
     const { data: existentes } = await supabase
       .from('HorariosAlumnos')
-      .select('id_horario, id_maestro, id_estudiante, hora_inicio, duracion, tipo, alberca')
+      .select('id_horario, id_maestro, id_estudiante, hora_inicio, duracion, tipo, alberca, color_fondo, color_letra')
       .eq('dia', dia)
 
     const esGrupalOMatros = (t) => t === 'grupal' || t === 'matros'
@@ -117,6 +127,10 @@ async function crear(req, res) {
             if (parseInt(ex.id_estudiante) === parseInt(estId)) {
               return res.status(409).json({ message: 'El alumno ya está inscrito en ese grupo.' })
             }
+            // Se une a un grupo/matros ya existente: hereda su color en vez
+            // del que haya venido en la petición.
+            colorFondoFinal = ex.color_fondo || null
+            colorLetraFinal = ex.color_letra || null
             continue
           }
           return res.status(409).json({ message: 'El maestro ya tiene una clase en ese horario.' })
@@ -136,7 +150,9 @@ async function crear(req, res) {
         hora_final:    horaFin,
         tipo:          tipoBloque,
         duracion:      duracionMin,
-        alberca:       parseInt(alberca)
+        alberca:       parseInt(alberca),
+        color_fondo:   colorFondoFinal,
+        color_letra:   colorLetraFinal
       }])
       .select()
       .single()
@@ -152,7 +168,7 @@ async function actualizar(req, res) {
   const { id } = req.params
   const {
     dia, hora_inicio, hora_fin, hora_final, tipo, duracion, alberca,
-    maestro_id, id_maestro
+    maestro_id, id_maestro, color_fondo, color_letra
   } = req.body
   const horaFin = hora_final || hora_fin
   const maestId = id_maestro || maestro_id
@@ -173,6 +189,10 @@ async function actualizar(req, res) {
     if (duracion)                                    updates.duracion    = parseInt(duracion)
     if (alberca && (alberca === 1 || alberca === 2)) updates.alberca     = parseInt(alberca)
     if (maestId)                                      updates.id_maestro  = parseInt(maestId)
+    // "" (opción "Por defecto" del dropdown) limpia el color a null a propósito,
+    // por eso se distingue de "no viene en la petición" (undefined => no tocar).
+    if (color_fondo !== undefined) updates.color_fondo = COLORES_VALIDOS.includes(color_fondo) ? color_fondo : null
+    if (color_letra !== undefined) updates.color_letra = COLORES_VALIDOS.includes(color_letra) ? color_letra : null
 
     // Valores efectivos que va a tener el registro después del update
     const diaFinal      = updates.dia         || actual.dia

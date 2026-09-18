@@ -10,6 +10,7 @@ const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer $
 
 let estudiantesData  = []
 let maestrosData     = []
+let idsConHorario    = new Set() // alumnos con al menos un bloque asignado hoy
 let estudianteNuevoId = null  // ID del alumno recién creado (durante inscripción)
 let estudianteEditandoId = null
 
@@ -25,12 +26,15 @@ document.getElementById('btnLogout').addEventListener('click', () => { sessionSt
 // --- Cargar datos ---
 async function cargarDatos() {
   try {
-    const [resEst, resMae] = await Promise.all([
+    const [resEst, resMae, resHor] = await Promise.all([
       fetch('/api/estudiantes', { headers }),
-      fetch('/api/maestros',    { headers })
+      fetch('/api/maestros',    { headers }),
+      fetch('/api/horarios/global', { headers })
     ])
     estudiantesData = (await resEst.json()).estudiantes || []
     maestrosData    = ((await resMae.json()).maestros || []).filter(m => m.activo !== false)
+    const horarios  = (await resHor.json()).horarios || []
+    idsConHorario   = new Set(horarios.map(h => h.id_estudiante || h.estudiante_id))
     renderTabla()
   } catch (err) {
     document.getElementById('loadingMsg').textContent = 'Error al cargar datos.'
@@ -62,12 +66,18 @@ function renderTabla() {
   emptyMsg.style.display = 'none'; tablaWrapper.style.display = 'block'
 
   lista.forEach(e => {
+    const sinClase = !idsConHorario.has(e.id_estudiante)
+    const precioTxt = `$${Number(e.precio_mensual || 0).toLocaleString('es-MX')}`
+    const precioCel = sinClase
+      ? `<strong class="precio-inactivo">${precioTxt}</strong><br><span class="badge-sin-clase">Sin clase asignada</span>`
+      : `<strong>${precioTxt}</strong>`
+
     const tr = document.createElement('tr')
     tr.innerHTML = `
       <td>${e.folio || '—'}</td>
       <td><strong>${e.nombre}</strong></td>
       <td>${e.telefono || '—'}</td>
-      <td><strong>$${Number(e.precio_mensual || 0).toLocaleString('es-MX')}</strong></td>
+      <td>${precioCel}</td>
       <td><span class="badge-estado ${e.activo ? 'badge-activo' : 'badge-inactivo'}">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td>
         <div class="acciones">

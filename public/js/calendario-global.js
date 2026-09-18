@@ -14,6 +14,18 @@ const DIAS       = ['lunes','martes','miercoles','jueves','viernes','sabado']
 const DIAS_LABEL = ['Lunes','Martes','Miérc.','Jueves','Viernes','Sábado']
 const COLORES    = ['color-0','color-1','color-2','color-3','color-4','color-5','color-6','color-7']
 
+// Color de fondo/letra por clase (independiente del maestro). "null"/"" es
+// "por defecto" → gris neutro, distinto del blanco de las celdas vacías.
+const PALETA_COLOR = {
+  azul:     { bg: 'rgba(56,189,248,0.55)',  texto: '#38bdf8' },
+  rosa:     { bg: 'rgba(244,114,182,0.55)', texto: '#f472b6' },
+  amarillo: { bg: 'rgba(250,204,21,0.55)',  texto: '#facc15' },
+  verde:    { bg: 'rgba(74,222,128,0.55)',  texto: '#4ade80' }
+}
+const COLOR_DEFECTO = { bg: 'rgba(148,163,184,0.45)', texto: '#f1f5f9' }
+function colorFondoDe(h) { return (h && PALETA_COLOR[h.color_fondo]) ? PALETA_COLOR[h.color_fondo].bg    : COLOR_DEFECTO.bg }
+function colorLetraDe(h) { return (h && PALETA_COLOR[h.color_letra]) ? PALETA_COLOR[h.color_letra].texto : COLOR_DEFECTO.texto }
+
 const BLOQUES = []
 for (let h = 9; h <= 19; h++) {
   BLOQUES.push(`${String(h).padStart(2,'0')}:00`)
@@ -38,6 +50,11 @@ let modalMaestrosLibres  = []
 let tipoSeleccionado     = 'individual'
 let duracionSeleccionada = 30
 let albercaSeleccionada  = 1
+let diasSeleccionados    = new Set() // días extra (además del original) para crear la misma clase varias veces
+let horariosAlumnoModal  = []        // horarios del alumno actualmente elegido en el modal, para detectar choques por día
+let alumnoModalId        = null      // alumno elegido en el buscador (modo libre, sin nuevoEstId)
+let colorFondoSeleccionado = ''      // '' = por defecto (gris)
+let colorLetraSeleccionado = ''
 
 // Modal grupo (modo asignación)
 let grupoReferencia = null
@@ -51,6 +68,8 @@ let estudianteEnModalEditar = null
 let tipoEditando      = 'individual'
 let duracionEditando  = 30
 let albercaEditando   = 1
+let colorFondoEditando = ''
+let colorLetraEditando = ''
 
 // Arrastrar y soltar para mover un bloque de horario
 let bloqueArrastrado = null
@@ -158,8 +177,9 @@ function renderCalendario() {
     mapa[key].push(h)
   })
 
-  // Slots ocupados por maestro: "dia_HH:MM_mId"
-  const ocupado = new Set()
+  // Slots ocupados por maestro: "dia_HH:MM_mId" → color del bloque de origen
+  // (para que la segunda mitad de un bloque de 60 min se pinte igual)
+  const ocupado = new Map()
   horariosData.forEach(h => {
     const mId = h.maestro_id || h.id_maestro
     const dur = parseInt(h.duracion) || 30
@@ -168,7 +188,7 @@ function renderCalendario() {
     for (let delta = 0; delta < dur; delta += 30) {
       const tot   = startMin + delta
       const tHora = `${String(Math.floor(tot / 60)).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`
-      ocupado.add(`${h.dia}_${tHora}_${mId}`)
+      ocupado.set(`${h.dia}_${tHora}_${mId}`, h)
     }
   })
 
@@ -295,10 +315,11 @@ function renderCalendario() {
           const esMatros   = bloqsMaestro.some(b => b.tipo === 'matros')
           const dur        = Math.max(...bloqsMaestro.map(b => parseInt(b.duracion) || 30))
           const alb        = bloqsMaestro[0].alberca ? ` · A${bloqsMaestro[0].alberca}` : ''
-          const colorClass = colorMap[m.id_maestro] || 'color-0'
 
           const div = document.createElement('div')
-          div.className = `celda-clase ${colorClass}${esGrupal ? ' celda-grupal' : ''}`
+          div.className = `celda-clase${esGrupal ? ' celda-grupal' : ''}`
+          div.style.background = colorFondoDe(bloqsMaestro[0])
+          div.style.color      = colorLetraDe(bloqsMaestro[0])
 
           if (esGrupal) {
             const tipoLabel = esMatros ? 'MATROS' : 'GRUPAL'
@@ -332,8 +353,10 @@ function renderCalendario() {
           td.appendChild(div)
 
         } else if (esCont) {
+          const origen = ocupado.get(`${dia}_${hora}_${m.id_maestro}`)
           const cont = document.createElement('div')
-          cont.className = `celda-cont ${colorMap[m.id_maestro] || 'color-0'}`
+          cont.className = 'celda-cont'
+          cont.style.background = colorFondoDe(origen)
           td.appendChild(cont)
 
         } else if (!estudianteOcupado.has(`${dia}_${hora}`)) {
@@ -488,18 +511,23 @@ function abrirModalAsignar(dia, hora, maestrosLibres) {
   tipoSeleccionado     = 'individual'
   duracionSeleccionada = 30
   albercaSeleccionada  = 1
+  diasSeleccionados    = new Set()
+  horariosAlumnoModal  = []
+  colorFondoSeleccionado = ''
+  colorLetraSeleccionado = ''
 
   const wrapAlumno = document.getElementById('modalAsignarAlumnoWrap')
   if (estudianteAsignar) {
     // Modo "asignar horario a alumno específico" (viene del perfil del alumno)
     wrapAlumno.style.display = 'none'
     document.getElementById('modalAsignarNombre').textContent = estudianteAsignar.nombre
+    horariosAlumnoModal = horariosEstudiante
   } else {
     // Modo libre: se elige (o registra) el alumno desde el propio calendario
     wrapAlumno.style.display = 'flex'
     wrapAlumno.style.flexDirection = 'column'
     document.getElementById('modalAsignarNombre').textContent = 'Nueva clase'
-    poblarSelectAlumnosModal()
+    resetBuscadorAlumnoModal()
     cerrarFormNuevoAlumno()
   }
 
@@ -517,30 +545,165 @@ function abrirModalAsignar(dia, hora, maestrosLibres) {
   actualizarBotonesTipo('individual')
   actualizarBotonesDuracion(30)
   actualizarBotonesAlberca(1)
+  renderBotonesDia()
+  actualizarSwatchesColor('modalAsignar', '.swatch-color', '')
+  actualizarSwatchesColor('modalAsignar', '.swatch-letra', '')
   document.getElementById('modalAsignar').style.display = 'flex'
 }
+
+// ─── Color de celda / letra (radio visual, círculos) ──────────────────────────
+function actualizarSwatchesColor(scopeId, selector, valor) {
+  document.querySelectorAll(`#${scopeId} ${selector}`).forEach(b =>
+    b.classList.toggle('activo', b.dataset.val === valor))
+}
+
+document.querySelectorAll('#modalAsignar .swatch-color').forEach(b =>
+  b.addEventListener('click', () => {
+    colorFondoSeleccionado = b.dataset.val
+    actualizarSwatchesColor('modalAsignar', '.swatch-color', colorFondoSeleccionado)
+  })
+)
+document.querySelectorAll('#modalAsignar .swatch-letra').forEach(b =>
+  b.addEventListener('click', () => {
+    colorLetraSeleccionado = b.dataset.val
+    actualizarSwatchesColor('modalAsignar', '.swatch-letra', colorLetraSeleccionado)
+  })
+)
+
+// ─── Botones de día (multi-selección) ─────────────────────────────────────────
+// El día original (sobre el que se abrió el modal) queda fijo y marcado; los
+// demás son opcionales y sirven para crear la misma clase también esos días.
+function renderBotonesDia() {
+  document.querySelectorAll('#modalAsignar .btn-dia').forEach(b => {
+    b.classList.toggle('dia-fijo', b.dataset.val === modalDia)
+  })
+  actualizarDisponibilidadDias()
+}
+
+function actualizarBotonesDiaUI() {
+  document.querySelectorAll('#modalAsignar .btn-dia').forEach(b => {
+    const dia = b.dataset.val
+    b.classList.toggle('activo', dia === modalDia || diasSeleccionados.has(dia))
+  })
+}
+
+function toggleDia(dia) {
+  if (dia === modalDia) return // el día original no se puede quitar
+  if (diasSeleccionados.has(dia)) diasSeleccionados.delete(dia)
+  else diasSeleccionados.add(dia)
+  actualizarBotonesDiaUI()
+}
+
+document.querySelectorAll('#modalAsignar .btn-dia').forEach(b =>
+  b.addEventListener('click', () => { if (!b.disabled) toggleDia(b.dataset.val) })
+)
+
+// Trae los horarios del alumno actualmente elegido en el modal (modo libre),
+// para saber en qué días ya tiene clase y así deshabilitar esos botones.
+async function cargarHorariosAlumnoModal(estId) {
+  horariosAlumnoModal = []
+  if (!estId) { actualizarDisponibilidadDias(); return }
+  try {
+    const res = await fetch(`/api/horarios/estudiante/${estId}`, { headers })
+    horariosAlumnoModal = (await res.json()).horarios || []
+  } catch (e) { horariosAlumnoModal = [] }
+  actualizarDisponibilidadDias()
+}
+
+// Recalcula, para cada botón de día extra, si el maestro elegido trabaja ese
+// día y no choca (ni el maestro ni el alumno) a la misma hora/duración.
+function actualizarDisponibilidadDias() {
+  if (!modalHora) return
+  const maestroId = parseInt(document.getElementById('modalAsignarMaestro').value)
+  const maestro   = maestrosData.find(m => m.id_maestro === maestroId)
+  const [hh, mm]  = modalHora.split(':').map(Number)
+  const start     = hh * 60 + mm
+  const end       = start + duracionSeleccionada
+
+  const seSolapa = (h, dia) => {
+    if (h.dia !== dia) return false
+    const [exH, exM] = h.hora_inicio.split(':').map(Number)
+    const exStart = exH * 60 + exM
+    const exEnd   = exStart + (parseInt(h.duracion) || 30)
+    return start < exEnd && exStart < end
+  }
+
+  document.querySelectorAll('#modalAsignar .btn-dia').forEach(b => {
+    const dia = b.dataset.val
+    if (dia === modalDia) { b.disabled = false; b.classList.remove('deshabilitado'); return }
+
+    const trabaja      = !maestro || !maestro.dias_trabajo || maestro.dias_trabajo.length === 0 || maestro.dias_trabajo.includes(dia)
+    const chocaMaestro = trabaja && horariosData.some(h => (h.maestro_id || h.id_maestro) === maestroId && seSolapa(h, dia))
+    const chocaAlumno  = horariosAlumnoModal.some(h => seSolapa(h, dia))
+    const disponible   = trabaja && !chocaMaestro && !chocaAlumno
+
+    b.disabled = !disponible
+    b.classList.toggle('deshabilitado', !disponible)
+    if (!disponible) diasSeleccionados.delete(dia)
+  })
+
+  actualizarBotonesDiaUI()
+}
+
+document.getElementById('modalAsignarMaestro').addEventListener('change', actualizarDisponibilidadDias)
 
 document.getElementById('modalAsignarCerrar').addEventListener('click',   () => { document.getElementById('modalAsignar').style.display = 'none' })
 document.getElementById('modalAsignarCancelar').addEventListener('click', () => { document.getElementById('modalAsignar').style.display = 'none' })
 
-// ─── Selector de alumno dentro del modal (modo libre, sin nuevoEstId) ─────────
-function poblarSelectAlumnosModal() {
-  const sel = document.getElementById('modalAsignarAlumnoSelect')
-  sel.innerHTML = ''
-  estudiantesData
-    .filter(e => e.activo !== false)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre))
-    .forEach(e => {
-      const opt = document.createElement('option')
-      opt.value = e.id_estudiante
-      opt.textContent = e.folio ? `${e.nombre} (${e.folio})` : e.nombre
-      sel.appendChild(opt)
-    })
+// ─── Buscador de alumno dentro del modal (modo libre, sin nuevoEstId) ─────────
+// Se puede escribir el nombre completo o el folio; al elegir un resultado
+// queda fijo en un "chip" (igual que en Pagos → Registrar cargo).
+function resetBuscadorAlumnoModal() {
+  alumnoModalId = null
+  document.getElementById('modalAsignarAlumnoBuscar').value = ''
+  document.getElementById('modalAsignarAlumnoResultados').style.display = 'none'
+  document.getElementById('modalAsignarAlumnoChip').style.display = 'none'
+  horariosAlumnoModal = []
+  actualizarDisponibilidadDias()
+}
+
+document.getElementById('modalAsignarAlumnoBuscar').addEventListener('input', function () {
+  const q      = this.value.toLowerCase().trim()
+  const resDiv = document.getElementById('modalAsignarAlumnoResultados')
+  if (!q) { resDiv.style.display = 'none'; return }
+
+  const matches = estudiantesData
+    .filter(e => e.activo !== false && (
+      e.nombre.toLowerCase().includes(q) ||
+      (e.folio || '').toLowerCase().includes(q)
+    ))
+    .slice(0, 6)
+
+  if (matches.length === 0) { resDiv.style.display = 'none'; return }
+
+  resDiv.innerHTML = ''
+  matches.forEach(e => {
+    const item = document.createElement('div')
+    item.className = 'buscar-resultado-item'
+    item.innerHTML = `<strong>${e.nombre}</strong>${e.folio ? `<span>Folio ${e.folio}</span>` : ''}`
+    item.addEventListener('click', () => seleccionarAlumnoModal(e))
+    resDiv.appendChild(item)
+  })
+  resDiv.style.display = 'block'
+})
+
+function seleccionarAlumnoModal(e) {
+  alumnoModalId = e.id_estudiante
+  document.getElementById('modalAsignarAlumnoBuscar').value = ''
+  document.getElementById('modalAsignarAlumnoResultados').style.display = 'none'
+
+  const chip = document.getElementById('modalAsignarAlumnoChip')
+  chip.innerHTML = `<span>${e.nombre}${e.folio ? ` · Folio ${e.folio}` : ''}</span>
+    <button type="button" class="chip-quitar">×</button>`
+  chip.style.display = 'flex'
+  chip.querySelector('.chip-quitar').addEventListener('click', resetBuscadorAlumnoModal)
+
+  cargarHorariosAlumnoModal(e.id_estudiante)
 }
 
 function cerrarFormNuevoAlumno() {
   document.getElementById('modalAsignarNuevoAlumnoForm').style.display = 'none'
-  document.getElementById('modalAsignarAlumnoSelect').disabled = false
+  document.getElementById('modalAsignarAlumnoBuscar').disabled = false
   document.getElementById('naNombre').value    = ''
   document.getElementById('naFolio').value     = ''
   document.getElementById('naTelefono').value  = ''
@@ -552,7 +715,7 @@ function cerrarFormNuevoAlumno() {
 
 document.getElementById('modalAsignarBtnNuevoAlumno').addEventListener('click', () => {
   document.getElementById('modalAsignarNuevoAlumnoForm').style.display = 'flex'
-  document.getElementById('modalAsignarAlumnoSelect').disabled = true
+  document.getElementById('modalAsignarAlumnoBuscar').disabled = true
 })
 
 document.getElementById('naCancelar').addEventListener('click', cerrarFormNuevoAlumno)
@@ -591,9 +754,8 @@ document.getElementById('naGuardar').addEventListener('click', async () => {
     }
 
     estudiantesData.push(data.estudiante)
-    poblarSelectAlumnosModal()
-    document.getElementById('modalAsignarAlumnoSelect').value = data.estudiante.id_estudiante
     cerrarFormNuevoAlumno()
+    seleccionarAlumnoModal(data.estudiante)
   } catch (e) {
     err.textContent   = 'No se pudo conectar al servidor.'
     err.style.display = 'block'
@@ -621,6 +783,7 @@ function actualizarBotonesDuracion(dur) {
   duracionSeleccionada = dur
   document.querySelectorAll('#modalAsignar .btn-duracion').forEach(b =>
     b.classList.toggle('activo', parseInt(b.dataset.val) === dur))
+  actualizarDisponibilidadDias()
 }
 
 function actualizarBotonesAlberca(n) {
@@ -642,10 +805,10 @@ document.querySelectorAll('#modalAsignar .btn-alberca').forEach(b =>
 document.getElementById('modalAsignarConfirmar').addEventListener('click', async () => {
   if (!modalDia || !modalHora) return
 
-  // Modo libre (sin nuevoEstId): el alumno viene del selector del modal
+  // Modo libre (sin nuevoEstId): el alumno viene del buscador del modal
   const estudianteId = estudianteAsignar
     ? estudianteAsignar.id_estudiante
-    : parseInt(document.getElementById('modalAsignarAlumnoSelect').value)
+    : alumnoModalId
 
   if (!estudianteId) { alert('Selecciona un alumno.'); return }
 
@@ -689,32 +852,47 @@ document.getElementById('modalAsignarConfirmar').addEventListener('click', async
     } catch (e) { /* si falla la verificación, se continúa; el backend igual valida el lado del maestro */ }
   }
 
-  try {
-    const res = await fetch('/api/horarios', {
-      method: 'POST', headers,
-      body: JSON.stringify({
-        estudiante_id: estudianteId,
-        maestro_id:    maestroId,
-        dia:           modalDia,
-        hora_inicio:   modalHora + ':00',
-        hora_fin:      horaFin,
-        tipo:          tipoSeleccionado,
-        duracion:      duracionSeleccionada,
-        alberca:       albercaSeleccionada
-      })
-    })
-    const data = await res.json()
-    if (!res.ok) { alert(data.message || 'Error al asignar.'); return }
+  // Días donde se crea la misma clase: el original + los días extra marcados.
+  const diasAEnviar = [modalDia, ...DIAS.filter(d => d !== modalDia && diasSeleccionados.has(d))]
 
+  const errores = []
+  let algunExito = false
+
+  for (const dia of diasAEnviar) {
+    try {
+      const res = await fetch('/api/horarios', {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          estudiante_id: estudianteId,
+          maestro_id:    maestroId,
+          dia,
+          hora_inicio:   modalHora + ':00',
+          hora_fin:      horaFin,
+          tipo:          tipoSeleccionado,
+          duracion:      duracionSeleccionada,
+          alberca:       albercaSeleccionada,
+          color_fondo:   colorFondoSeleccionado,
+          color_letra:   colorLetraSeleccionado
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) errores.push(`${DIAS_LABEL[DIAS.indexOf(dia)]}: ${data.message || 'error al asignar'}`)
+      else algunExito = true
+    } catch (err) {
+      errores.push(`${DIAS_LABEL[DIAS.indexOf(dia)]}: error de conexión`)
+    }
+  }
+
+  if (errores.length > 0) alert(`No se pudieron crear algunas clases:\n${errores.join('\n')}`)
+
+  if (algunExito) {
     document.getElementById('modalAsignar').style.display = 'none'
 
     // Igual que el resto de los flujos de alta de clase: regresa al perfil del
     // alumno con ?nuevaClase=true para que salga el mensaje de precio mensual /
     // cargo extra, y quede reflejado en Historial de pagos, Pagos y Reportes.
     window.location.href = `perfil-estudiante.html?id=${estudianteId}&nuevaClase=true`
-  } catch (err) {
-    alert('Error de conexión.')
-  } finally {
+  } else {
     resetBoton()
   }
 })
@@ -847,6 +1025,11 @@ function abrirModalEditar(bloque, dia, hora, bloqs) {
   actualizarBotonesEdDuracion(bloque.duracion || 30)
   actualizarBotonesEdAlberca(bloque.alberca || 1)
 
+  colorFondoEditando = bloque.color_fondo || ''
+  colorLetraEditando = bloque.color_letra || ''
+  document.getElementById('modalEditarColorFondo').value = colorFondoEditando
+  document.getElementById('modalEditarColorLetra').value = colorLetraEditando
+
   if (esGrupal) {
     document.getElementById('modalEditarSecAlumnos').style.display    = 'block'
     document.getElementById('modalEditarSecIndividual').style.display = 'none'
@@ -933,6 +1116,8 @@ document.querySelectorAll('#modalEditar .btn-dur-ed').forEach(b =>
 document.querySelectorAll('#modalEditar .btn-alb-ed').forEach(b =>
   b.addEventListener('click', () => actualizarBotonesEdAlberca(parseInt(b.dataset.val)))
 )
+document.getElementById('modalEditarColorFondo').addEventListener('change', function () { colorFondoEditando = this.value })
+document.getElementById('modalEditarColorLetra').addEventListener('change', function () { colorLetraEditando = this.value })
 
 document.getElementById('modalEditarCerrar').addEventListener('click', () => {
   document.getElementById('modalEditar').style.display = 'none'
@@ -970,7 +1155,9 @@ document.getElementById('modalEditarGuardar').addEventListener('click', async ()
           hora_fin:    horaFin,
           tipo:        tipoEditando,
           duracion:    duracionEditando,
-          alberca:     albercaEditando
+          alberca:     albercaEditando,
+          color_fondo: colorFondoEditando,
+          color_letra: colorLetraEditando
         })
       })
       if (!res.ok) { const d = await res.json(); alert(d.message || 'Error al guardar.'); return }
@@ -995,11 +1182,13 @@ document.getElementById('modalEditarEliminar').addEventListener('click', async (
     : '¿Eliminar esta clase?'
   if (!confirm(msg)) return
   try {
+    const idsEstudiantes = todosBloquesGrupo.map(b => b.estudiante_id || b.id_estudiante).filter(Boolean)
     for (const b of todosBloquesGrupo) {
       await fetch(`/api/horarios/${b.id_horario}`, { method: 'DELETE', headers })
     }
     document.getElementById('modalEditar').style.display = 'none'
     await recargarCalendario()
+    await ofrecerDescuentosTrasEliminar(idsEstudiantes)
   } catch (err) {
     alert('Error al eliminar.')
   }
@@ -1009,6 +1198,8 @@ document.getElementById('modalEditarEliminar').addEventListener('click', async (
 async function quitarAlumnoDeGrupo(idHorario) {
   if (!confirm('¿Quitar a este alumno del grupo?')) return
   try {
+    const bloque = todosBloquesGrupo.find(b => b.id_horario === idHorario)
+    const estId  = bloque ? (bloque.estudiante_id || bloque.id_estudiante) : null
     const res = await fetch(`/api/horarios/${idHorario}`, { method: 'DELETE', headers })
     if (!res.ok) { alert('Error al quitar alumno.'); return }
     todosBloquesGrupo = todosBloquesGrupo.filter(b => b.id_horario !== idHorario)
@@ -1019,8 +1210,117 @@ async function quitarAlumnoDeGrupo(idHorario) {
       renderizarAlumnosEditar()
       recargarCalendario()
     }
+    if (estId) await ofrecerDescuentosTrasEliminar([estId])
   } catch (err) { alert('Error de conexión.') }
 }
+
+// ─── Descuento tras eliminar una clase ────────────────────────────────────────
+// Muestra, uno por uno, el aviso de "¿deseas descontar algo?" para cada alumno
+// afectado por un borrado (bloque individual o grupo/matros completo).
+let ajusteResolver = null
+let ajustePago      = null
+
+function mesActualStr() {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2,'0')}`
+}
+
+// Prioriza el pago pendiente del mes actual; si no existe, el pendiente más
+// próximo (el mes más antiguo primero) de cualquier otro mes.
+function buscarPagoPendienteParaDescuento(pagos) {
+  const mes = mesActualStr()
+  const delMesActual = pagos.find(p => p.tipo === 'mensual' && p.estado === 'pendiente' && p.mes && p.mes.startsWith(mes))
+  if (delMesActual) return delMesActual
+  const pendientes = pagos
+    .filter(p => p.tipo === 'mensual' && p.estado === 'pendiente' && p.mes)
+    .sort((a, b) => a.mes.localeCompare(b.mes))
+  return pendientes[0] || null
+}
+
+async function ofrecerDescuentosTrasEliminar(idsEstudiantes) {
+  for (const estId of idsEstudiantes) {
+    let pagos = []
+    try {
+      const res = await fetch(`/api/pagos?id_estudiante=${estId}`, { headers })
+      pagos = (await res.json()).pagos || []
+    } catch (e) { /* si falla, se muestra igual el aviso sin pago pendiente */ }
+    await abrirModalAjuste(estId, buscarPagoPendienteParaDescuento(pagos))
+  }
+}
+
+function abrirModalAjuste(estId, pagoExistente) {
+  return new Promise(resolve => {
+    ajusteResolver = resolve
+    ajustePago     = pagoExistente
+    document.getElementById('modalAjusteMonto').value = ''
+
+    const est    = estudiantesData.find(e => e.id_estudiante === estId)
+    const nombre = est ? est.nombre.split(' ')[0] : 'El alumno'
+    const wrap         = document.getElementById('modalAjusteMontoWrap')
+    const btnConfirmar = document.getElementById('modalAjusteConfirmar')
+    const btnOmitir    = document.getElementById('modalAjusteOmitir')
+
+    document.getElementById('modalAjusteTitulo').textContent = 'Descuento del mes'
+
+    if (!pagoExistente) {
+      document.getElementById('modalAjusteDesc').textContent =
+        `Se eliminó una clase de ${nombre}. No tiene ningún pago pendiente en este momento, así que no hay nada de qué descontar.`
+      wrap.style.display         = 'none'
+      btnConfirmar.style.display = 'none'
+      btnOmitir.textContent      = 'Entendido'
+    } else {
+      const montoActual = `$${Number(pagoExistente.monto).toLocaleString('es-MX')}`
+      const mesTxt = new Date(pagoExistente.mes + 'T12:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long' })
+      document.getElementById('modalAjusteDesc').textContent =
+        `Se eliminó una clase de ${nombre}. El cargo pendiente de ${mesTxt} es ${montoActual}. ¿Deseas descontar algo?`
+      wrap.style.display         = ''
+      btnConfirmar.style.display = ''
+      btnOmitir.textContent      = 'Omitir'
+    }
+
+    document.getElementById('modalAjuste').style.display = 'flex'
+  })
+}
+
+function cerrarModalAjuste() {
+  document.getElementById('modalAjuste').style.display = 'none'
+  const resolver = ajusteResolver
+  ajusteResolver = null
+  if (resolver) resolver()
+}
+
+document.getElementById('modalAjusteCerrar').addEventListener('click', cerrarModalAjuste)
+document.getElementById('modalAjusteOmitir').addEventListener('click', cerrarModalAjuste)
+
+document.getElementById('modalAjusteConfirmar').addEventListener('click', async () => {
+  const montoStr = document.getElementById('modalAjusteMonto').value.trim()
+  if (!montoStr || isNaN(parseFloat(montoStr)) || parseFloat(montoStr) <= 0 || !ajustePago) {
+    cerrarModalAjuste()
+    return
+  }
+  const monto = parseFloat(montoStr)
+
+  const btn = document.getElementById('modalAjusteConfirmar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
+  try {
+    const nuevoMonto = Math.max(0, ajustePago.monto - monto)
+    const res = await fetch(`/api/pagos/${ajustePago.id_pago}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ monto: nuevoMonto })
+    })
+    if (!res.ok) { const d = await res.json(); alert(d.message || 'Error al actualizar pago.') }
+  } catch (err) {
+    alert('Error de conexión.')
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+    cerrarModalAjuste()
+  }
+})
 
 // Mostrar selector agregar alumno
 document.getElementById('modalEditarBtnAgregar').addEventListener('click', () => {

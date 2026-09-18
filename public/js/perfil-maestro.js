@@ -15,6 +15,18 @@ const DIAS       = ['lunes','martes','miercoles','jueves','viernes','sabado']
 const DIAS_LABEL = ['Lunes','Martes','Miérc.','Jueves','Viernes','Sábado']
 const COLORES    = ['color-0','color-1','color-2','color-3','color-4','color-5']
 
+// Color de fondo/letra por clase (se edita solo desde Calendario Global; aquí
+// nada más se muestra). "null"/"" es "por defecto" → gris neutro.
+const PALETA_COLOR = {
+  azul:     { bg: 'rgba(56,189,248,0.55)',  texto: '#38bdf8' },
+  rosa:     { bg: 'rgba(244,114,182,0.55)', texto: '#f472b6' },
+  amarillo: { bg: 'rgba(250,204,21,0.55)',  texto: '#facc15' },
+  verde:    { bg: 'rgba(74,222,128,0.55)',  texto: '#4ade80' }
+}
+const COLOR_DEFECTO = { bg: 'rgba(148,163,184,0.45)', texto: '#f1f5f9' }
+function colorFondoDe(h) { return (h && PALETA_COLOR[h.color_fondo]) ? PALETA_COLOR[h.color_fondo].bg    : COLOR_DEFECTO.bg }
+function colorLetraDe(h) { return (h && PALETA_COLOR[h.color_letra]) ? PALETA_COLOR[h.color_letra].texto : COLOR_DEFECTO.texto }
+
 const BLOQUES = []
 for (let h = 9; h <= 19; h++) {
   BLOQUES.push(`${String(h).padStart(2,'0')}:00`)
@@ -261,7 +273,9 @@ function renderizarCalendario() {
           Object.entries(gProp).forEach(([alb, blist]) => {
             const b   = blist[0]
             const div = document.createElement('div')
-            div.className = `bloque-alumno bloque-grupal-unirse ${colorMap[b.estudiante_id || b.id_estudiante] || 'color-0'}`
+            div.className = 'bloque-alumno bloque-grupal-unirse'
+            div.style.background = colorFondoDe(b)
+            div.style.color      = colorLetraDe(b)
             div.innerHTML = `
               <div class="al-nombre">${b.tipo === 'matros' ? 'Matros' : 'Grupal'} · ${blist.length} alumno${blist.length !== 1 ? 's' : ''} · A${alb}</div>
               <div class="al-clase">Clic para ver y agregar</div>`
@@ -273,7 +287,9 @@ function renderizarCalendario() {
           iProp.forEach(b => {
             const est = estudiantesData.find(e => e.id_estudiante === (b.estudiante_id || b.id_estudiante))
             const div = document.createElement('div')
-            div.className = `bloque-alumno bloque-ocupado-individual ${colorMap[b.estudiante_id || b.id_estudiante] || 'color-0'}`
+            div.className = 'bloque-alumno bloque-ocupado-individual'
+            div.style.background = colorFondoDe(b)
+            div.style.color      = colorLetraDe(b)
             div.innerHTML = `
               <div class="al-nombre">${est ? est.nombre : '—'}</div>
               <div class="al-clase">Ocupado · ${b.duracion || 30} min · A${b.alberca || 1}</div>`
@@ -330,7 +346,9 @@ function renderizarCalendario() {
           Object.entries(grupales).forEach(([alb, blist]) => {
             const b   = blist[0]
             const div = document.createElement('div')
-            div.className = `bloque-alumno ${colorMap[b.estudiante_id || b.id_estudiante] || 'color-0'} bloque-clickable`
+            div.className = 'bloque-alumno bloque-clickable'
+            div.style.background = colorFondoDe(b)
+            div.style.color      = colorLetraDe(b)
             div.innerHTML = `
               <div class="al-nombre">${b.tipo === 'matros' ? 'Matros' : 'Grupal'} · ${blist.length} alumno${blist.length !== 1 ? 's' : ''} · A${alb}</div>
               <div class="al-clase">${b.duracion || 60} min</div>`
@@ -341,7 +359,9 @@ function renderizarCalendario() {
           individuales.forEach(b => {
             const est = estudiantesData.find(e => e.id_estudiante === (b.estudiante_id || b.id_estudiante))
             const div = document.createElement('div')
-            div.className = `bloque-alumno ${colorMap[b.estudiante_id || b.id_estudiante] || 'color-0'} bloque-clickable`
+            div.className = 'bloque-alumno bloque-clickable'
+            div.style.background = colorFondoDe(b)
+            div.style.color      = colorLetraDe(b)
             div.innerHTML = `
               <div class="al-nombre">${est ? est.nombre : '—'}</div>
               <div class="al-clase">${b.tipo === 'matros' ? 'Matros' : 'Individual'} · ${b.duracion || 30} min · A${b.alberca || 1}</div>`
@@ -748,12 +768,14 @@ document.getElementById('modalEditarEliminar').addEventListener('click', async (
   if (!confirm(msg)) return
 
   try {
+    const idsEstudiantes = todosBloquesGrupo.map(b => b.estudiante_id || b.id_estudiante).filter(Boolean)
     const ids = todosBloquesGrupo.map(b => b.id_horario)
     for (const id of ids) {
       await fetch(`/api/horarios/${id}`, { method: 'DELETE', headers })
     }
     document.getElementById('modalEditar').style.display = 'none'
     await cargarHorarios()
+    await ofrecerDescuentosTrasEliminar(idsEstudiantes)
   } catch (err) {
     alert('Error al eliminar.')
   }
@@ -763,6 +785,8 @@ document.getElementById('modalEditarEliminar').addEventListener('click', async (
 async function quitarAlumnoDeGrupo(idHorario) {
   if (!confirm('¿Quitar a este alumno del grupo?')) return
   try {
+    const bloque = todosBloquesGrupo.find(b => b.id_horario === idHorario)
+    const estId  = bloque ? (bloque.estudiante_id || bloque.id_estudiante) : null
     const res = await fetch(`/api/horarios/${idHorario}`, { method: 'DELETE', headers })
     if (!res.ok) { alert('Error al quitar alumno.'); return }
 
@@ -774,10 +798,119 @@ async function quitarAlumnoDeGrupo(idHorario) {
       renderizarAlumnosEditar()
       cargarHorarios()
     }
+    if (estId) await ofrecerDescuentosTrasEliminar([estId])
   } catch (err) {
     alert('Error de conexión.')
   }
 }
+
+// ─── Descuento tras eliminar una clase ────────────────────────────────────────
+// Muestra, uno por uno, el aviso de "¿deseas descontar algo?" para cada alumno
+// afectado por un borrado (bloque individual o grupo/matros completo).
+let ajusteResolver = null
+let ajustePago      = null
+
+function mesActualStr() {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2,'0')}`
+}
+
+// Prioriza el pago pendiente del mes actual; si no existe, el pendiente más
+// próximo (el mes más antiguo primero) de cualquier otro mes.
+function buscarPagoPendienteParaDescuento(pagos) {
+  const mes = mesActualStr()
+  const delMesActual = pagos.find(p => p.tipo === 'mensual' && p.estado === 'pendiente' && p.mes && p.mes.startsWith(mes))
+  if (delMesActual) return delMesActual
+  const pendientes = pagos
+    .filter(p => p.tipo === 'mensual' && p.estado === 'pendiente' && p.mes)
+    .sort((a, b) => a.mes.localeCompare(b.mes))
+  return pendientes[0] || null
+}
+
+async function ofrecerDescuentosTrasEliminar(idsEstudiantes) {
+  for (const estId of idsEstudiantes) {
+    let pagos = []
+    try {
+      const res = await fetch(`/api/pagos?id_estudiante=${estId}`, { headers })
+      pagos = (await res.json()).pagos || []
+    } catch (e) { /* si falla, se muestra igual el aviso sin pago pendiente */ }
+    await abrirModalAjuste(estId, buscarPagoPendienteParaDescuento(pagos))
+  }
+}
+
+function abrirModalAjuste(estId, pagoExistente) {
+  return new Promise(resolve => {
+    ajusteResolver = resolve
+    ajustePago     = pagoExistente
+    document.getElementById('modalAjusteMonto').value = ''
+
+    const est    = estudiantesData.find(e => e.id_estudiante === estId)
+    const nombre = est ? est.nombre.split(' ')[0] : 'El alumno'
+    const wrap         = document.getElementById('modalAjusteMontoWrap')
+    const btnConfirmar = document.getElementById('modalAjusteConfirmar')
+    const btnOmitir    = document.getElementById('modalAjusteOmitir')
+
+    document.getElementById('modalAjusteTitulo').textContent = 'Descuento del mes'
+
+    if (!pagoExistente) {
+      document.getElementById('modalAjusteDesc').textContent =
+        `Se eliminó una clase de ${nombre}. No tiene ningún pago pendiente en este momento, así que no hay nada de qué descontar.`
+      wrap.style.display         = 'none'
+      btnConfirmar.style.display = 'none'
+      btnOmitir.textContent      = 'Entendido'
+    } else {
+      const montoActual = `$${Number(pagoExistente.monto).toLocaleString('es-MX')}`
+      const mesTxt = new Date(pagoExistente.mes + 'T12:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long' })
+      document.getElementById('modalAjusteDesc').textContent =
+        `Se eliminó una clase de ${nombre}. El cargo pendiente de ${mesTxt} es ${montoActual}. ¿Deseas descontar algo?`
+      wrap.style.display         = ''
+      btnConfirmar.style.display = ''
+      btnOmitir.textContent      = 'Omitir'
+    }
+
+    document.getElementById('modalAjuste').style.display = 'flex'
+  })
+}
+
+function cerrarModalAjuste() {
+  document.getElementById('modalAjuste').style.display = 'none'
+  const resolver = ajusteResolver
+  ajusteResolver = null
+  if (resolver) resolver()
+}
+
+document.getElementById('modalAjusteCerrar').addEventListener('click', cerrarModalAjuste)
+document.getElementById('modalAjusteOmitir').addEventListener('click', cerrarModalAjuste)
+
+document.getElementById('modalAjusteConfirmar').addEventListener('click', async () => {
+  const montoStr = document.getElementById('modalAjusteMonto').value.trim()
+  if (!montoStr || isNaN(parseFloat(montoStr)) || parseFloat(montoStr) <= 0 || !ajustePago) {
+    cerrarModalAjuste()
+    return
+  }
+  const monto = parseFloat(montoStr)
+
+  const btn = document.getElementById('modalAjusteConfirmar')
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
+  try {
+    const nuevoMonto = Math.max(0, ajustePago.monto - monto)
+    const res = await fetch(`/api/pagos/${ajustePago.id_pago}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ monto: nuevoMonto })
+    })
+    if (!res.ok) { const d = await res.json(); alert(d.message || 'Error al actualizar pago.') }
+  } catch (err) {
+    alert('Error de conexión.')
+  } finally {
+    btn.disabled = false
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+    cerrarModalAjuste()
+  }
+})
 
 // Mostrar/ocultar selector para agregar alumno al grupo
 document.getElementById('modalEditarBtnAgregar').addEventListener('click', () => {

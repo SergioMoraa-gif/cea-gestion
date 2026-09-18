@@ -136,7 +136,11 @@
 
       <div class="form-group" id="modalAsignarAlumnoWrap" style="display:none">
         <label class="form-label">Alumno</label>
-        <select id="modalAsignarAlumnoSelect" class="form-select"></select>
+        <div class="buscar-alumno-wrap">
+          <input type="text" id="modalAsignarAlumnoBuscar" class="form-input" placeholder="Buscar por nombre o folio..." autocomplete="off"/>
+          <div id="modalAsignarAlumnoResultados" class="buscar-resultados" style="display:none"></div>
+        </div>
+        <div id="modalAsignarAlumnoChip" class="alumno-chip" style="display:none"></div>
         <button type="button" class="btn-agregar-grupo" id="modalAsignarBtnNuevoAlumno">+ Nuevo alumno</button>
 
         <div id="modalAsignarNuevoAlumnoForm" class="nuevo-alumno-form" style="display:none">
@@ -186,6 +190,41 @@
         <div class="opciones-btns">
           <button class="btn-alberca activo" data-val="1">Alberca 1</button>
           <button class="btn-alberca" data-val="2">Alberca 2</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Día</label>
+        <div class="opciones-btns opciones-dias">
+          <button class="btn-dia" data-val="lunes"     title="Lunes">L</button>
+          <button class="btn-dia" data-val="martes"    title="Martes">M</button>
+          <button class="btn-dia" data-val="miercoles" title="Miércoles">M</button>
+          <button class="btn-dia" data-val="jueves"    title="Jueves">J</button>
+          <button class="btn-dia" data-val="viernes"   title="Viernes">V</button>
+          <button class="btn-dia" data-val="sabado"    title="Sábado">S</button>
+        </div>
+        <span class="form-hint" id="modalAsignarDiasHint">La clase se crea también en los días marcados, misma hora y maestro.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Color de celda</label>
+        <div class="opciones-btns opciones-colores">
+          <button type="button" class="swatch-color swatch-defecto activo" data-val="" title="Por defecto"></button>
+          <button type="button" class="swatch-color swatch-azul"     data-val="azul"     title="Azul cielo"></button>
+          <button type="button" class="swatch-color swatch-rosa"     data-val="rosa"     title="Rosa"></button>
+          <button type="button" class="swatch-color swatch-amarillo" data-val="amarillo" title="Amarillo"></button>
+          <button type="button" class="swatch-color swatch-verde"    data-val="verde"    title="Verde"></button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Color de letra</label>
+        <div class="opciones-btns opciones-colores">
+          <button type="button" class="swatch-letra swatch-defecto activo" data-val="" title="Por defecto"></button>
+          <button type="button" class="swatch-letra swatch-azul"     data-val="azul"     title="Azul cielo"></button>
+          <button type="button" class="swatch-letra swatch-rosa"     data-val="rosa"     title="Rosa"></button>
+          <button type="button" class="swatch-letra swatch-amarillo" data-val="amarillo" title="Amarillo"></button>
+          <button type="button" class="swatch-letra swatch-verde"    data-val="verde"    title="Verde"></button>
         </div>
       </div>
 
@@ -283,6 +322,29 @@
         </div>
       </div>
 
+      <div class="form-row-doble">
+        <div class="form-group">
+          <label class="form-label">Color de fondo</label>
+          <select id="modalEditarColorFondo" class="form-select-dark">
+            <option value="">Por defecto (gris)</option>
+            <option value="azul">Azul cielo</option>
+            <option value="rosa">Rosa</option>
+            <option value="amarillo">Amarillo</option>
+            <option value="verde">Verde</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color de letra</label>
+          <select id="modalEditarColorLetra" class="form-select-dark">
+            <option value="">Por defecto</option>
+            <option value="azul">Azul cielo</option>
+            <option value="rosa">Rosa</option>
+            <option value="amarillo">Amarillo</option>
+            <option value="verde">Verde</option>
+          </select>
+        </div>
+      </div>
+
       <div id="modalEditarSecAlumnos" style="display:none">
         <div class="modal-bloque-count" id="modalEditarCount">—</div>
         <div class="modal-bloque-lista" id="modalEditarListaAlumnos"></div>
@@ -307,6 +369,32 @@
         <button class="btn-guardar" id="modalEditarGuardar">
           <span class="btn-text">Guardar cambios</span>
           <span class="btn-loader" style="display:none"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Descuento tras eliminar clase -->
+  <div class="modal-overlay" id="modalAjuste" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalAjusteTitulo">Descuento del mes</h3>
+        <button class="btn-cerrar-form" id="modalAjusteCerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="modal-desc" id="modalAjusteDesc">—</p>
+      <div class="form-group" id="modalAjusteMontoWrap">
+        <label class="form-label" id="modalAjusteLabel">Monto a descontar</label>
+        <input type="number" id="modalAjusteMonto" class="form-input" placeholder="Dejar vacío para omitir" min="0" step="0.01"/>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancelar" id="modalAjusteOmitir">Omitir</button>
+        <button class="btn-guardar" id="modalAjusteConfirmar">
+          <span class="btn-text">Aplicar</span>
+          <span class="btn-loader" style="display:none">
+            <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </span>
         </button>
       </div>
     </div>
