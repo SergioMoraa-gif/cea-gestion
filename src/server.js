@@ -28,6 +28,7 @@ app.use('/api/maestros',    requireAuth, require('./routes/maestros.routes'))
 app.use('/api/estudiantes', requireAuth, require('./routes/estudiantes.routes'))
 app.use('/api/horarios',    requireAuth, require('./routes/horarios.routes'))
 app.use('/api/pagos',       requireAuth, require('./routes/pagos.routes'))
+app.use('/api/calendario',  requireAuth, require('./routes/calendario.routes'))
 
 // ─── Health check ─────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

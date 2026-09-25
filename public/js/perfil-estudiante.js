@@ -467,6 +467,22 @@ function mesActualStr() {
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2,'0')}`
 }
 
+// Mismo criterio que el backend (src/services/cargos.service.js
+// mesACobrarISO): antes del día 25 se cobra el mes en curso; desde el 25
+// (cuando el cron ya generó el mes siguiente para todos) se cobra el mes
+// siguiente. Evita que este modal cree un cargo del mes actual "de más"
+// cuando el backend ya generó, al asignar la clase, el del mes que sí toca.
+function mesACobrarStr() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date())
+  const get = t => Number(parts.find(p => p.type === t).value)
+  const anio = get('year'), mes = get('month'), dia = get('day')
+  if (dia < 25) return `${anio}-${String(mes).padStart(2, '0')}`
+  const d = new Date(Date.UTC(anio, mes, 1)) // mes (1-12) como índice 0-based ya apunta al siguiente
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
 // Pago pendiente contra el cual ofrecer el descuento tras eliminar una clase:
 // prioriza el del mes actual y, si no existe, el pendiente más próximo (el mes
 // más antiguo primero) de cualquier otro mes.
@@ -586,8 +602,10 @@ document.getElementById('btnPrecioGuardar').addEventListener('click', async () =
     estudianteData = dataEst.estudiante
     renderInfo()
 
-    // Crear cargo mensual para el mes actual (si no existe ya)
-    const mesStr = mesActualStr()
+    // Crear cargo mensual para el mes que corresponda (si no existe ya —
+    // /api/pagos es idempotente, así que si el backend ya lo generó al
+    // asignar la clase, esto simplemente no hace nada).
+    const mesStr = mesACobrarStr()
     await fetch('/api/pagos', {
       method: 'POST', headers,
       body: JSON.stringify({

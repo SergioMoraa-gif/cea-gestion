@@ -4,6 +4,26 @@
 // ================================
 
 const supabase = require('../config/db')
+const { generarCargosFaltantes } = require('../services/cargos.service')
+
+const TIPOS_VALIDOS   = ['mensual', 'ajuste', 'inscripcion', 'mantenimiento']
+const ESTADOS_VALIDOS = ['pendiente', 'pagado', 'en_transito']
+
+// Un monto válido es un número finito y no negativo (0 se permite para no
+// romper flujos existentes, pero /generar y el cron ya lo evitan por su cuenta).
+function montoValido(m) {
+  const n = Number(m)
+  return Number.isFinite(n) && n >= 0
+}
+
+// Normaliza "YYYY-MM" o "YYYY-MM-DD" a "YYYY-MM-01" — todos los cargos se
+// guardan anclados al día 1 del mes; si se cuela otro día se rompe la
+// unicidad alumno+mes (el índice único solo cubre el valor exacto).
+function normalizarMes(mes) {
+  if (!mes) return mes
+  const m = String(mes).match(/^(\d{4})-(\d{2})/)
+  return m ? `${m[1]}-${m[2]}-01` : mes
+}
 
 // GET /api/pagos
 async function listar(req, res) {
@@ -56,15 +76,41 @@ async function actualizar(req, res) {
   const { id } = req.params
   const { estado, monto, metodo, fecha_pago, notas } = req.body
   try {
+    const { data: actual, error: errActual } = await supabase
+      .from('Pagos').select('*').eq('id_pago', id).single()
+    if (errActual || !actual) return res.status(404).json({ message: 'Pago no encontrado.' })
+
+    if (estado !== undefined && !ESTADOS_VALIDOS.includes(estado))
+      return res.status(400).json({ message: `Estado inválido. Usa: ${ESTADOS_VALIDOS.join(', ')}.` })
+    if (monto !== undefined && !montoValido(monto))
+      return res.status(400).json({ message: 'El monto debe ser un número mayor o igual a 0.' })
+
     const updates = {}
     if (estado     !== undefined) updates.estado     = estado
-    if (monto      !== undefined) updates.monto      = monto
+    if (monto      !== undefined) updates.monto      = Number(monto)
     if (metodo     !== undefined) updates.metodo     = metodo
     if (fecha_pago !== undefined) updates.fecha_pago = fecha_pago
     if (notas      !== undefined) updates.notas      = notas
 
     if (Object.keys(updates).length === 0)
       return res.status(400).json({ message: 'No hay campos para actualizar.' })
+
+    // Estado final tras aplicar los cambios (puede venir solo el estado, o
+    // solo el método, etc. — hay que mirar el resultado completo).
+    const estadoFinal = updates.estado !== undefined ? updates.estado : actual.estado
+    const metodoFinal = updates.metodo !== undefined ? updates.metodo : actual.metodo
+    const fechaFinal  = updates.fecha_pago !== undefined ? updates.fecha_pago : actual.fecha_pago
+
+    if (estadoFinal !== 'pendiente' && (!metodoFinal || !fechaFinal))
+      return res.status(400).json({ message: 'Para marcar un pago como pagado o en tránsito hace falta método y fecha de pago.' })
+
+    // Al regresar un pago a "pendiente" se limpian método/fecha — si no, queda
+    // un registro contradictorio (pendiente pero con rastro de un cobro que
+    // ya no existe).
+    if (estadoFinal === 'pendiente' && updates.estado === 'pendiente') {
+      updates.metodo     = null
+      updates.fecha_pago = null
+    }
 
     const { data, error } = await supabase
       .from('Pagos')
@@ -77,64 +123,43 @@ async function actualizar(req, res) {
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
-// POST /api/pagos/generar — Genera cargos usando precio_mensual del estudiante
+// POST /api/pagos/generar — Genera los cargos mensuales que falten para el mes dado
 async function generar(req, res) {
-  const { mes } = req.body
+  const mes = normalizarMes(req.body.mes)
   if (!mes) return res.status(400).json({ message: 'El mes es requerido.' })
 
   try {
-    // Todos los estudiantes activos con su precio
-    const { data: estudiantes, error: errEst } = await supabase
-      .from('Estudiantes')
-      .select('id_estudiante, precio_mensual')
-      .eq('activo', true)
-    if (errEst) return res.status(500).json({ message: errEst.message })
-
-    // Solo los que tienen horario/clase asignado (igual que el cron automático)
-    const { data: horarios, error: errHor } = await supabase
-      .from('HorariosAlumnos')
-      .select('id_estudiante')
-    if (errHor) return res.status(500).json({ message: errHor.message })
-    const idsConHorario = new Set((horarios || []).map(h => h.id_estudiante))
-    const estudiantesConClase = (estudiantes || []).filter(e => idsConHorario.has(e.id_estudiante))
-
-    // Cargos ya existentes para ese mes
-    const { data: existentes } = await supabase
-      .from('Pagos').select('id_estudiante').eq('mes', mes)
-    const idsExistentes = new Set((existentes || []).map(p => p.id_estudiante))
-
-    // Generar solo los que no existen
-    const nuevos = estudiantesConClase
-      .filter(e => !idsExistentes.has(e.id_estudiante))
-      .map(e => ({
-        id_estudiante: e.id_estudiante,
-        mes,
-        monto:  e.precio_mensual || 0,
-        estado: 'pendiente',
-        tipo:   'mensual'
-      }))
-
-    if (nuevos.length > 0) {
-      const { error } = await supabase.from('Pagos').insert(nuevos)
-      if (error) return res.status(500).json({ message: error.message })
-    }
-
-    res.json({ message: 'Cargos generados.', generados: nuevos.length })
+    const { generados, omitidosSinPrecio, errores } = await generarCargosFaltantes(mes)
+    if (errores.length > 0) return res.status(500).json({ message: errores.join(' | ') })
+    res.json({
+      message: 'Cargos generados.',
+      generados,
+      omitidosSinPrecio: omitidosSinPrecio.map(e => e.nombre)
+    })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
 // POST /api/pagos — Crear cargo individual
 async function crear(req, res) {
-  const { id_estudiante, mes, monto, es_inscripcion, tipo } = req.body
+  const { id_estudiante, mes: mesCrudo, monto, es_inscripcion, tipo } = req.body
+  const mes = normalizarMes(mesCrudo)
   if (!id_estudiante) return res.status(400).json({ message: 'Faltan datos.' })
+  if (tipo !== undefined && !TIPOS_VALIDOS.includes(tipo))
+    return res.status(400).json({ message: `Tipo inválido. Usa: ${TIPOS_VALIDOS.join(', ')}.` })
+  if (monto !== undefined && !montoValido(monto))
+    return res.status(400).json({ message: 'El monto debe ser un número mayor o igual a 0.' })
 
   try {
+    const { data: estudiante, error: errEst } = await supabase
+      .from('Estudiantes').select('id_estudiante').eq('id_estudiante', id_estudiante).single()
+    if (errEst || !estudiante) return res.status(404).json({ message: 'El alumno no existe.' })
+
     // Cargo de ajuste (proporcional por clase agregada/descontada)
     if (tipo === 'ajuste') {
       if (!mes || monto === undefined) return res.status(400).json({ message: 'Faltan datos para el ajuste.' })
       const { data, error } = await supabase
         .from('Pagos')
-        .insert([{ id_estudiante, mes, monto, estado: 'pendiente', tipo: 'ajuste' }])
+        .insert([{ id_estudiante, mes, monto: Number(monto), estado: 'pendiente', tipo: 'ajuste' }])
         .select().single()
       if (error) return res.status(500).json({ message: error.message })
       return res.status(201).json({ message: 'Ajuste creado.', pago: data })
@@ -153,9 +178,15 @@ async function crear(req, res) {
 
       const { data, error } = await supabase
         .from('Pagos')
-        .insert([{ id_estudiante, mes: null, monto: monto || 0, estado: 'pendiente', tipo: 'inscripcion' }])
+        .insert([{ id_estudiante, mes: null, monto: monto !== undefined ? Number(monto) : 0, estado: 'pendiente', tipo: 'inscripcion' }])
         .select().single()
-      if (error) return res.status(500).json({ message: error.message })
+      if (error) {
+        // 23505 = choque con idx_pagos_inscripcion_unico (scripts/2026-09-unique-inscripcion.sql):
+        // dos clics a la vez, gana el primero y el segundo recibe "ya existe" en vez de un 500 crudo.
+        if (error.code === '23505')
+          return res.json({ message: 'La inscripción ya existe.', existe: true })
+        return res.status(500).json({ message: error.message })
+      }
       return res.status(201).json({ message: 'Cargo de inscripción creado.', pago: data })
     }
 
@@ -167,10 +198,15 @@ async function crear(req, res) {
       return res.json({ message: 'El cargo ya existe.', existe: true })
 
     const { estado, metodo, fecha_pago } = req.body
+    if (estado !== undefined && !ESTADOS_VALIDOS.includes(estado))
+      return res.status(400).json({ message: `Estado inválido. Usa: ${ESTADOS_VALIDOS.join(', ')}.` })
+    if (estado && estado !== 'pendiente' && (!metodo || !fecha_pago))
+      return res.status(400).json({ message: 'Para registrar un cargo como pagado hace falta método y fecha de pago.' })
+
     const registro = {
       id_estudiante,
       mes,
-      monto:  monto || 0,
+      monto:  monto !== undefined ? Number(monto) : 0,
       estado: estado || 'pendiente',
       tipo:   'mensual'
     }
@@ -179,7 +215,11 @@ async function crear(req, res) {
 
     const { data, error } = await supabase
       .from('Pagos').insert([registro]).select().single()
-    if (error) return res.status(500).json({ message: error.message })
+    if (error) {
+      if (error.code === '23505')
+        return res.json({ message: 'El cargo ya existe.', existe: true })
+      return res.status(500).json({ message: error.message })
+    }
     res.status(201).json({ message: 'Cargo creado.', pago: data })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
@@ -187,7 +227,18 @@ async function crear(req, res) {
 // DELETE /api/pagos/:id
 async function eliminar(req, res) {
   const { id } = req.params
+  const force = req.query.force === 'true'
   try {
+    const { data: actual, error: errActual } = await supabase
+      .from('Pagos').select('id_pago, estado').eq('id_pago', id).single()
+    if (errActual || !actual) return res.status(404).json({ message: 'Cargo no encontrado.' })
+
+    if (actual.estado !== 'pendiente' && !force)
+      return res.status(409).json({
+        message: 'Este cargo ya está pagado o en tránsito. Vuelve a intentarlo confirmando la eliminación.',
+        requiereConfirmacion: true
+      })
+
     const { error } = await supabase
       .from('Pagos')
       .delete()

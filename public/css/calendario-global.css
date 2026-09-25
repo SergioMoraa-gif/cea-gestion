@@ -45,6 +45,11 @@
 .btn-dashboard:hover { background: rgba(255,255,255,0.22); }
 .btn-maestros { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background 0.2s; white-space: nowrap; }
 .btn-maestros:hover { background: rgba(255,255,255,0.22); }
+.btn-peligro { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: rgba(220,38,38,0.18); border: 1px solid rgba(220,38,38,0.4); border-radius: 999px; color: #fca5a5; font-size: 0.82rem; font-weight: 600; font-family: var(--font-main); cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.btn-peligro:hover { background: rgba(220,38,38,0.35); }
+.btn-peligro-solido { display: flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1.4rem; background: #dc2626; border: none; border-radius: 999px; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: var(--font-main); }
+.btn-peligro-solido:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-peligro-solido:not(:disabled):hover { background: #b91c1c; }
 
 /* Banner modo asignación */
 .banner-nuevo { display: flex; align-items: center; gap: 0.8rem; background: rgba(37,99,235,0.25); border: 1.5px solid rgba(37,99,235,0.5); border-radius: 14px; padding: 0.9rem 1.2rem; color: #93c5fd; font-size: 0.88rem; flex-wrap: wrap; }

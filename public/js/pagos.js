@@ -235,12 +235,23 @@ document.getElementById('modalEliminarConfirmar').addEventListener('click', asyn
   btn.querySelector('.btn-loader').style.display = 'flex'
 
   try {
-    const res = await fetch(`/api/pagos/${pagoEliminandoId}`, { method: 'DELETE', headers })
-    if (!res.ok) {
-      const data = await res.json()
-      alert(data.message || 'Error al eliminar.')
-      return
+    let res  = await fetch(`/api/pagos/${pagoEliminandoId}`, { method: 'DELETE', headers })
+    let data = await res.json()
+
+    // El cargo ya está pagado/en tránsito: el servidor pide una segunda
+    // confirmación explícita antes de borrar dinero ya cobrado.
+    if (!res.ok && data.requiereConfirmacion) {
+      const seguro = confirm(
+        'Este cargo ya está PAGADO. Al eliminarlo se pierde el registro de que ese dinero se cobró.\n\n' +
+        '¿Seguro que quieres eliminarlo de todos modos?'
+      )
+      if (!seguro) return
+      res  = await fetch(`/api/pagos/${pagoEliminandoId}?force=true`, { method: 'DELETE', headers })
+      data = await res.json()
     }
+
+    if (!res.ok) { alert(data.message || 'Error al eliminar.'); return }
+
     document.getElementById('modalEliminar').style.display = 'none'
     pagoEliminandoId = null
     await cargarPagos()

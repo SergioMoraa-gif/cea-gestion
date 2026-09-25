@@ -1380,4 +1380,76 @@ function imprimirDia(dia, diaLabel) {
   window.print()
 }
 
+// ─── Limpiar calendario (reinicio de periodo) ─────────────────────────────────
+const FRASE_LIMPIAR = 'LIMPIAR CALENDARIO'
+
+document.getElementById('btnLimpiarCalendario').addEventListener('click', async () => {
+  const resumenEl = document.getElementById('modalLimpiarResumen')
+  const inputEl   = document.getElementById('modalLimpiarInput')
+  const errEl     = document.getElementById('modalLimpiarError')
+  const btnOk     = document.getElementById('modalLimpiarConfirmar')
+
+  inputEl.value        = ''
+  errEl.style.display  = 'none'
+  btnOk.disabled        = true
+  resumenEl.textContent = 'Calculando qué se va a borrar…'
+  document.getElementById('modalLimpiar').style.display = 'flex'
+
+  try {
+    const res  = await fetch('/api/calendario/limpiar/preview', { headers })
+    const data = await res.json()
+    if (!res.ok) { resumenEl.textContent = data.message || 'No se pudo calcular el resumen.'; return }
+    resumenEl.innerHTML =
+      `Se borrarán <strong>${data.horarios}</strong> clase(s) del calendario y <strong>${data.pagosABorrar}</strong> cargo(s) sin cobrar. ` +
+      `Se conservarán <strong>${data.pagosConservados}</strong> cargo(s) ya pagados.`
+  } catch (err) {
+    resumenEl.textContent = 'No se pudo calcular el resumen (revisa tu conexión).'
+  }
+})
+
+document.getElementById('modalLimpiarCerrar').addEventListener('click',    cerrarModalLimpiar)
+document.getElementById('modalLimpiarCancelar').addEventListener('click',  cerrarModalLimpiar)
+function cerrarModalLimpiar() { document.getElementById('modalLimpiar').style.display = 'none' }
+
+document.getElementById('modalLimpiarInput').addEventListener('input', function () {
+  document.getElementById('modalLimpiarConfirmar').disabled = this.value !== FRASE_LIMPIAR
+})
+
+document.getElementById('modalLimpiarConfirmar').addEventListener('click', async () => {
+  const errEl = document.getElementById('modalLimpiarError')
+  const btn   = document.getElementById('modalLimpiarConfirmar')
+  const confirmacion = document.getElementById('modalLimpiarInput').value
+
+  if (confirmacion !== FRASE_LIMPIAR) return
+  errEl.style.display = 'none'
+  btn.disabled = true
+  btn.querySelector('.btn-text').style.display   = 'none'
+  btn.querySelector('.btn-loader').style.display = 'flex'
+
+  try {
+    const res  = await fetch('/api/calendario/limpiar', {
+      method: 'POST', headers, body: JSON.stringify({ confirmacion })
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      errEl.textContent   = data.message || 'Error al limpiar el calendario.'
+      errEl.style.display = 'block'
+      return
+    }
+    cerrarModalLimpiar()
+    alert(`Calendario limpiado: ${data.horariosEliminados} clase(s) y ${data.pagosEliminados} cargo(s) sin cobrar eliminados. Los cargos pagados se conservaron.`)
+    window.location.reload()
+  } catch (err) {
+    errEl.textContent   = 'Error de conexión.'
+    errEl.style.display = 'block'
+  } finally {
+    btn.querySelector('.btn-text').style.display   = 'inline'
+    btn.querySelector('.btn-loader').style.display = 'none'
+    // btn.disabled se deja como está: si hubo error se puede reintentar
+    // (el input sigue teniendo la frase escrita), si tuvo éxito la página
+    // ya se está recargando.
+    btn.disabled = document.getElementById('modalLimpiarInput').value !== FRASE_LIMPIAR
+  }
+})
+
 iniciar()

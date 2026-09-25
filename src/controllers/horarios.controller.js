@@ -4,6 +4,7 @@
 // ================================
 
 const supabase = require('../config/db')
+const { mesACobrarISO, asegurarCargoMensual } = require('../services/cargos.service')
 
 const TIPOS_VALIDOS  = ['individual', 'grupal', 'matros']
 const COLORES_VALIDOS = ['azul', 'rosa', 'amarillo', 'verde']
@@ -159,7 +160,27 @@ async function crear(req, res) {
 
     if (error) return res.status(500).json({ message: error.message })
 
-    res.status(201).json({ message: 'Horario asignado.', horario: normalizar(data) })
+    // Al asignar la clase se genera de una vez el cargo del mes que le toca
+    // (no se deja en manos de que alguien pase por el modal de precio del
+    // perfil del alumno — ese paso se puede saltar u omitir). Es "mejor
+    // esfuerzo": si falla, el horario ya quedó creado y se avisa en la
+    // respuesta para que se revise a mano; no se revierte la clase por esto.
+    let cargoAviso = null
+    try {
+      const { data: est } = await supabase
+        .from('Estudiantes').select('precio_mensual').eq('id_estudiante', parseInt(estId)).single()
+      if (est && est.precio_mensual > 0) {
+        const { error: errCargo } = await asegurarCargoMensual(parseInt(estId), mesACobrarISO(), est.precio_mensual)
+        if (errCargo) cargoAviso = `No se pudo generar el cargo del mes: ${errCargo}`
+      } else {
+        cargoAviso = 'El alumno no tiene precio mensual configurado; no se generó cargo automáticamente.'
+      }
+    } catch (errCargoInesperado) {
+      cargoAviso = 'No se pudo generar el cargo del mes.'
+      console.error('⚠️  Error generando cargo automático al asignar horario:', errCargoInesperado.message)
+    }
+
+    res.status(201).json({ message: 'Horario asignado.', horario: normalizar(data), cargoAviso })
   } catch (err) { res.status(500).json({ message: 'Error interno.' }) }
 }
 
